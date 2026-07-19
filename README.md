@@ -58,11 +58,5 @@ Built with **React 19**, **TypeScript**, **Vite**, **Tailwind CSS v3**, **shadcn
 
 ---
 
-## ⚙️ Supabase Setup
-
-Database migrations are located in `supabase/migrations/` and must be applied sequentially via the Supabase CLI.
-
-### 1. Link Your Project
-```bash
-npx supabase login
-npx supabase link --project-ref <your-project-ref>
+### Link Your Project
+https://vocab-app-gamma-eosin.vercel.app/
