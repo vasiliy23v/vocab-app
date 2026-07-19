@@ -1,149 +1,68 @@
-# Карточки · Немецкий
+# 🇩🇪 DeutschLernen App
+<img width="2557" height="1362" alt="image" src="https://github.com/user-attachments/assets/1b4341c0-d647-4327-b4b5-033d0733257f" />
 
-React + TypeScript + Vite + shadcn/ui + Supabase приложение для изучения немецких слов
-с поддержкой учителей и учеников.
+A modern, full-stack flashcard and vocabulary learning platform for German learners, featuring robust teacher-student workflows, realtime synchronization, and a comprehensive superadmin panel.
 
-## Возможности
+Built with **React 19**, **TypeScript**, **Vite**, **Tailwind CSS v3**, **shadcn/ui**, and **Supabase**.
 
-- Email/пароль авторизация (Supabase Auth)
-- Загрузка карточек (TSV/CSV, файл или вставка текста)
-- Карточки с переворотом (русский → немецкий, описание и примеры на немецкой стороне)
-- Тест: выбор перевода, поиск правильного написания, ввод слова
-- Разбивка на уровни по 20/25/30 слов
-- Приглашение учителя по коду/ссылке (многие-ко-многим: у ученика может быть
-  несколько учителей, у учителя — несколько учеников)
-- Учитель видит таблицу слов ученика с тремя кнопками: **Знает / Не знает / Повторить**
-- У ученика отдельно показываются:
-  - **Повторение** — слова без отметки учителя или отмеченные «не знает» / «повторить»
-  - **Выученное** — слова, отмеченные учителем «знает»
-- Realtime-обновления (Supabase Realtime) — изменения видны без перезагрузки
-- Интерфейс на русском и английском (переключатель в шапке), выбор сохраняется в браузере
-- У каждой карточки два перевода: `translation` (русский) и `translation_en` (английский,
-  необязательный) — при английском интерфейсе показывается `translation_en`
-- Роль **суперадмина**: админ-панель (`/admin`) со списком всех пользователей
-  (роль, кол-во наборов/карточек, связи учитель↔ученик), сброс пароля пользователю,
-  повышение/понижение роли, удаление аккаунта
-- Библиотека шаблонов карточек — суперадмин собирает набор один раз и назначает
-  его конкретным ученикам (каждому создаётся собственная копия)
-- Сброс пароля по email (ссылка на `/reset-password`) — и для себя со страницы входа,
-  и по кнопке из админ-панели для любого пользователя
+---
 
-## Технологии
+## 🔥 Key Features
 
-- React 19 + TypeScript + Vite
-- Tailwind CSS v3 + shadcn/ui (Radix primitives)
-- Supabase (Postgres, Auth, Row Level Security, Realtime)
-- React Router
+### 👥 Role-Based Workflows
+*   **Students:** 
+    *   Import custom vocabulary sets via TSV/CSV files or direct text pasting.
+    *   Study using interactive flip-cards (German ↔ Russian/English with descriptions and contextual examples).
+    *   Practice with smart quizzes (multiple-choice, spelling search, manual input).
+    *   Generate unique teacher invitation codes/links (supports many-to-many relationships).
+    *   Dynamic vocabulary filtering: **Review** (unmarked or flagged items) vs. **Learned** (approved by a teacher).
+*   **Teachers:**
+    *   Manage multiple students simultaneously.
+    *   Realtime review of student vocabulary tables.
+    *   One-click grading controls: **Knows / Doesn't Know / Repeat**.
+*   **Superadmins (`/admin`):**
+    *   Global user management (roles, data counts, teacher-student links).
+    *   Administrative overrides (password resets, role elevation/demotion, account deletion).
+    *   **Global Templates:** Create master decks and assign fresh copies directly to targeted students.
 
-## Настройка Supabase
+### ⚡ Technical Highlights
+*   **Supabase Realtime:** Immediate interface updates across teacher and student screens upon state changes.
+*   **Dual-Layer Localization (i18n):** 
+    *   App UI translated into RU/EN (persisted in `localStorage`).
+    *   Dynamic card translations: toggling the UI language automatically switches primary card data fields (`translation` ↔ `translation_en`).
+*   **Data Security (RLS):** Strict Postgres Row-Level Security ensures teachers only access data for linked students. Administrative mutations are securely processed via database RPCs.
 
-Миграции (`supabase/migrations/0001_init.sql`, `0002_add_translation_en.sql`,
-`0003_superadmin.sql`) применяются через Supabase CLI — так они гарантированно
-выполняются по порядку и в правильной транзакции.
+---
 
-1. Создайте проект на [supabase.com](https://supabase.com) (или используйте существующий)
-2. Установите CLI и авторизуйтесь:
-   ```bash
-   npx supabase login
-   ```
-3. Свяжите репозиторий с проектом (Project ref — в Project Settings → General):
-   ```bash
-   npx supabase link --project-ref <ваш-project-ref>
-   ```
-   CLI попросит database password проекта (Project Settings → Database).
-4. Примените все миграции разом:
-   ```bash
-   npx supabase db push
-   ```
-5. В Project Settings → API скопируйте `Project URL` и `anon public key` в `.env.local`
-6. В Authentication → Providers убедитесь что Email включён
-   (для разработки можно отключить "Confirm email" в Auth settings, чтобы не настраивать SMTP)
-7. В Authentication → URL Configuration добавьте `<ваш-домен>/reset-password`
-   в Redirect URLs — иначе ссылка для сброса пароля не сработает
-8. В Database → Replication включите `supabase_realtime` для таблиц
-   `cards`, `card_marks`, `teacher_links`, `decks` (миграция делает это автоматически,
-   но проверьте, что Realtime включён на уровне проекта)
-9. Назначьте себя суперадмином (единственный шаг, который делается вручную —
-   первого суперадмина некому назначить кроме вас) — в SQL Editor:
-   ```sql
-   update public.profiles set role = 'superadmin' where email = 'you@example.com';
-   ```
+## 🛠 Tech Stack
 
-## Локальная разработка
+*   **Frontend:** React 19, TypeScript, Vite, React Router v6
+*   **Styling:** Tailwind CSS v3, shadcn/ui (Radix UI Primitives)
+*   **Backend & DB:** Supabase (PostgreSQL, Auth, RLS, Realtime, RPC)
+*   **Localization:** i18next, react-i18next
 
+---
+
+## 💾 Database Schema
+
+| Table / View | Description |
+| :--- | :--- |
+| `profiles` | User profiles extending `auth.users` (`user` / `superadmin` roles). |
+| `teacher_links` | Many-to-many relationship mapping students to teachers. |
+| `invites` | Single/multi-use invitation codes generated by students. |
+| `decks` | Card decks (`is_template = true` denotes a global admin template). |
+| `cards` | Vocabulary items with translations, descriptions, and examples. |
+| `card_marks` | Target evaluation marks from students or teachers. |
+| `deck_assignments` | Tracked master template distributions to specific students. |
+| `cards_with_marks` | *(View)* Aggregated cards joined with the latest active evaluation marks. |
+
+---
+
+## ⚙️ Supabase Setup
+
+Database migrations are located in `supabase/migrations/` and must be applied sequentially via the Supabase CLI.
+
+### 1. Link Your Project
 ```bash
-npm install
-cp .env.example .env.local
-# впишите VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY в .env.local
-npm run dev
-```
-
-## Деплой (Vercel/Netlify)
-
-1. Запушьте проект в Git-репозиторий
-2. На Vercel/Netlify создайте новый проект из репозитория
-3. Build command: `npm run build`, Output directory: `dist`
-4. Добавьте переменные окружения `VITE_SUPABASE_URL` и `VITE_SUPABASE_ANON_KEY`
-   в настройках проекта (Environment Variables)
-5. Деплой
-
-## Структура базы данных
-
-| Таблица         | Назначение                                                    |
-|-----------------|----------------------------------------------------------------|
-| `profiles`      | Профиль пользователя (1:1 с `auth.users`)                      |
-| `teacher_links` | Связь ученик↔учитель, многие-ко-многим                        |
-| `invites`       | Коды-приглашения (генерирует ученик, принимает учитель)        |
-| `decks`         | Наборы карточек (принадлежат ученику; `is_template = true` — шаблон суперадмина) |
-| `cards`         | Отдельные слова в наборе                                       |
-| `card_marks`    | Отметки на карточке (знает/не знает/повторить), от ученика или учителя |
-| `deck_assignments` | Какой шаблон какому ученику назначен и какой набор ему скопирован |
-
-`profiles.role` — `'user'` или `'superadmin'`. Вид `cards_with_marks` объединяет
-карточку с последней отметкой учителя (любого из привязанных учителей) и
-собственной отметкой ученика.
-
-Вся логика доступа реализована через Row Level Security — учитель видит и
-редактирует только карточки/отметки тех учеников, с которыми у него есть
-активная связь в `teacher_links`; суперадмин (`is_superadmin()`) видит и
-редактирует всё. Действия админ-панели (список пользователей, смена роли,
-удаление аккаунта, назначение шаблона) идут через RPC
-(`admin_list_profiles`, `admin_set_role`, `admin_delete_user`, `admin_assign_deck`) —
-всё проверяется на стороне базы, без сервисного ключа Supabase.
-
-## Структура проекта
-
-```
-src/
-  components/ui/       — shadcn/ui компоненты (button, card, dialog, table, sheet, ...)
-  components/           — Flashcard, QuizSession, LevelPicker, UploadDialog, AppLayout,
-                            LanguageSwitcher
-  hooks/                 — useAuth (+ сброс/смена пароля), useTeacherLinks,
-                            useCards (decks/cards/marks), useAdmin (список
-                            пользователей, роли, шаблоны и их назначение)
-  lib/                   — supabase client, parseVocab, quizEngine, levels, utils,
-                            cardTranslation (выбор translation/translation_en по языку)
-  i18n/                  — инициализация i18next + locales/ru.json, locales/en.json
-                            (переводы интерфейса, независимо от переводов слов в карточках)
-  pages/                 — AuthPage, HomePage, PeoplePage, InvitePage,
-                            StudentDashboard, TeacherStudentPage, AdminDashboard,
-                            ResetPasswordPage
-  types/db.ts            — TypeScript типы, соответствующие схеме БД
-supabase/migrations/    — SQL миграции (0001 схема, 0002 английский перевод,
-                            0003 роли/суперадмин/шаблоны)
-```
-
-## Локализация (i18n)
-
-Интерфейс переведён на русский и английский язык через `i18next` / `react-i18next`
-(`src/i18n/`). Переключатель языка в шапке приложения (и на странице входа) меняет
-язык и сохраняет выбор в `localStorage`.
-
-Это отдельная система от перевода **содержимого карточек**: у каждой карточки есть
-столбцы `translation` (русский) и `translation_en` (английский, необязательный).
-Какой из них показывать на карточках, в тесте и в таблице слов, определяется текущим
-языком интерфейса — `src/lib/cardTranslation.ts`. Если для карточки не заполнен
-`translation_en`, при английском интерфейсе используется `translation` как запасной
-вариант.
-
-При загрузке TSV/CSV можно добавить необязательный столбец `translation_en`.
+npx supabase login
+npx supabase link --project-ref <your-project-ref>
