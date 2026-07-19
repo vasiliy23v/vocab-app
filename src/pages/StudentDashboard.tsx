@@ -1,0 +1,612 @@
+import * as React from "react"
+import { useTranslation } from "react-i18next"
+import { useAuth } from "@/hooks/useAuth"
+import { useDecks, useCards } from "@/hooks/useCards"
+import { useDashboardSection } from "@/hooks/useDashboardSection"
+import { UploadDialog } from "@/components/UploadDialog"
+import { Flashcard } from "@/components/Flashcard"
+import { LevelPicker } from "@/components/LevelPicker"
+import { GroupPicker } from "@/components/GroupPicker"
+import { QuizSession } from "@/components/QuizSession"
+import { WordTable } from "@/components/WordTable"
+import { Fireworks } from "@/components/Fireworks"
+import { formatCount } from "@/lib/formatCount"
+import { groupCardsByTopic, hasMultipleTopics, type CardGroup } from "@/lib/groupCards"
+import { cardTranslation, cardDescription, deckName as deckDisplayName } from "@/lib/cardTranslation"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Progress } from "@/components/ui/progress"
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import type { CardWithMarks, Deck, MarkStatus } from "@/types/db"
+import { toast } from "sonner"
+import { cn } from "@/lib/utils"
+
+type View =
+  | { kind: "deck-list" }
+  | { kind: "mode-pick"; deck: Deck; cards: CardWithMarks[] }
+  | { kind: "review-mode-pick" }
+  | { kind: "group-pick"; mode: "cards" | "quiz"; cards: CardWithMarks[]; label: string }
+  | { kind: "level-pick"; mode: "cards" | "quiz"; cards: CardWithMarks[]; label: string }
+  | { kind: "study"; mode: "cards" | "quiz"; cards: CardWithMarks[]; label: string }
+  | { kind: "done"; mode: "cards" | "quiz"; good: CardWithMarks[]; bad: CardWithMarks[]; label: string }
+
+export default function StudentDashboard() {
+  const { t, i18n } = useTranslation()
+  const { user } = useAuth()
+  const { decks, createDeck, deleteDeck } = useDecks(user?.id ?? null)
+  const { section, cards, reviewQueue, masteredCards, loading: allLoading, setOwnMark } = useDashboardSection()
+  const [view, setView] = React.useState<View>({ kind: "deck-list" })
+  const [levelSize, setLevelSize] = React.useState(20)
+  const [activeDeckId, setActiveDeckId] = React.useState<string | null>(null)
+  const [tableDeckId, setTableDeckId] = React.useState<string>("all")
+  const [tableSearch, setTableSearch] = React.useState("")
+
+  const tableCards = React.useMemo(
+    () => (tableDeckId === "all" ? cards : cards.filter((c) => c.deck_id === tableDeckId)),
+    [cards, tableDeckId]
+  )
+
+  const filteredTableCards = React.useMemo(() => {
+    const q = tableSearch.trim().toLowerCase()
+    if (!q) return tableCards
+    return tableCards.filter((c) => {
+      const translation = cardTranslation(c, i18n.language).toLowerCase()
+      const description = cardDescription(c, i18n.language).toLowerCase()
+      return (
+        c.word_de.toLowerCase().includes(q) ||
+        translation.includes(q) ||
+        description.includes(q)
+      )
+    })
+  }, [tableCards, tableSearch, i18n.language])
+
+  const { cards: deckCards, addCards } = useCards(activeDeckId)
+
+  // Clicking Review/Mastered/Word table/decks in the sidebar only updates
+  // `section` (it lives above this component, in DashboardSectionProvider).
+  // Without this, picking e.g. "Word table" while mid-way through browsing
+  // a deck (mode-pick/level-pick/study/...) left the dashboard stuck on
+  // that deep view, since nothing here ever reset it back to the
+  // section-driven "deck-list" view — the sidebar tab would highlight but
+  // the content never showed. Snap back whenever the section changes
+  // (adjusting state during render, per React's guidance, instead of an
+  // effect — avoids an extra render and the cascading-setState lint rule).
+  const [prevSection, setPrevSection] = React.useState(section)
+  if (section !== prevSection) {
+    setPrevSection(section)
+    setView({ kind: "deck-list" })
+  }
+
+  if (!user) return null
+
+  const handleCreateDeckUpload = async (
+    rows: any,
+    deckName?: string,
+    onProgress?: (done: number, total: number) => void,
+    deckNameEn?: string
+  ) => {
+    const { deck, error } = await createDeck(deckName || t("dashboard.defaultDeckName"), user.id, deckNameEn)
+    if (error || !deck) {
+      const msg = error || t("dashboard.createDeckError")
+      toast.error(msg)
+      return { error: msg }
+    }
+    const { error: addErr } = await addCardsToDeck(deck.id, rows, onProgress)
+    if (addErr) toast.error(addErr)
+    return { error: addErr }
+  }
+
+  const addCardsToDeck = async (
+    deckId: string,
+    rows: any,
+    onProgress?: (done: number, total: number) => void
+  ) => {
+    setActiveDeckId(deckId)
+    return await addCards(rows, user.id, deckId, onProgress)
+  }
+
+  /** Cards/Quiz was picked for some set of cards — if it spans more
+   *  than one topic, let the student pick a topic first; otherwise go
+   *  straight to the usual count-based level picker. */
+  const goToStudySetup = (mode: "cards" | "quiz", cardsToStudy: CardWithMarks[], label: string) => {
+    if (hasMultipleTopics(cardsToStudy)) {
+      setView({ kind: "group-pick", mode, cards: cardsToStudy, label })
+    } else {
+      setView({ kind: "level-pick", mode, cards: cardsToStudy, label })
+    }
+  }
+
+  // ── DECK LIST (the dashboard's default/home section) ──
+  if (view.kind === "deck-list") {
+    // Nothing uploaded yet at all — skip the counters entirely (they'd all
+    // read "0" and just make the page feel broken) and show one clear next
+    // step instead. Only replaces the default "decks" section; Review/
+    // Mastered/Table (reached via the sidebar) still show their own
+    // section-specific empty messages.
+    if (!allLoading && decks.length === 0 && section === "decks") {
+      return (
+        <div className="mx-auto max-w-4xl space-y-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-semibold">{t("dashboard.title")}</h1>
+          </div>
+          <div className="flex flex-col items-center gap-4 rounded-lg border border-dashed py-16 text-center">
+            <div className="text-4xl">📚</div>
+            <div className="space-y-1">
+              <h2 className="text-base font-medium">{t("dashboard.emptyStateTitle")}</h2>
+              <p className="max-w-xs text-sm text-muted-foreground">{t("dashboard.emptyStateDesc")}</p>
+            </div>
+            <UploadDialog askDeckName onUpload={handleCreateDeckUpload} />
+          </div>
+        </div>
+      )
+    }
+
+    const sectionTitle =
+      section === "review"
+        ? t("dashboard.review")
+        : section === "mastered"
+          ? t("dashboard.mastered")
+          : section === "table"
+            ? t("dashboard.wordTableHeading")
+            : t("dashboard.title")
+
+    return (
+      <div className="mx-auto max-w-4xl space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-semibold">{sectionTitle}</h1>
+          <UploadDialog askDeckName onUpload={handleCreateDeckUpload} />
+        </div>
+
+        {section === "decks" && (
+          <div className="space-y-2">
+            {decks.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("dashboard.noDecks")}</p>
+            ) : (
+              decks.map((d) => (
+                <DeckRow
+                  key={d.id}
+                  deckId={d.id}
+                  name={deckDisplayName(d, i18n.language)}
+                  onOpen={async (cards) => setView({ kind: "mode-pick", deck: d, cards })}
+                  onDelete={() => deleteDeck(d.id)}
+                  onAddCards={(rows, onProgress) => addCardsToDeck(d.id, rows, onProgress)}
+                />
+              ))
+            )}
+          </div>
+        )}
+
+        {section === "review" &&
+          (allLoading ? (
+            <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+          ) : reviewQueue.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {cards.length === 0 ? t("dashboard.reviewEmptyNoCards") : t("dashboard.reviewEmpty")}
+            </p>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">{t("dashboard.reviewDesc")}</p>
+              <div className="flex gap-2">
+                <Button onClick={() => goToStudySetup("cards", reviewQueue, t("dashboard.review"))}>
+                  {t("dashboard.cardsButton", { count: formatCount(reviewQueue.length) })}
+                </Button>
+                <Button variant="outline" onClick={() => goToStudySetup("quiz", reviewQueue, t("dashboard.review"))}>
+                  {t("dashboard.quizButton")}
+                </Button>
+              </div>
+            </div>
+          ))}
+
+        {section === "mastered" &&
+          (allLoading ? (
+            <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+          ) : masteredCards.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t("dashboard.masteredEmpty")}</p>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">{t("dashboard.masteredDesc")}</p>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => goToStudySetup("cards", masteredCards, t("dashboard.mastered"))}>
+                  {t("dashboard.cardsButton", { count: formatCount(masteredCards.length) })}
+                </Button>
+                <Button variant="outline" onClick={() => goToStudySetup("quiz", masteredCards, t("dashboard.mastered"))}>
+                  {t("dashboard.quizButton")}
+                </Button>
+              </div>
+            </div>
+          ))}
+
+        {section === "table" && (
+          <div className="space-y-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <Input
+                value={tableSearch}
+                onChange={(e) => setTableSearch(e.target.value)}
+                placeholder={t("wordTable.searchPlaceholder")}
+                className="sm:max-w-xs"
+              />
+              {decks.length > 1 && (
+                <div className="flex gap-2 flex-wrap">
+                  <DeckFilterButton
+                    active={tableDeckId === "all"}
+                    onClick={() => setTableDeckId("all")}
+                    label={t("dashboard.allDecks")}
+                  />
+                  {decks.map((d) => (
+                    <DeckFilterButton
+                      key={d.id}
+                      active={tableDeckId === d.id}
+                      onClick={() => setTableDeckId(d.id)}
+                      label={deckDisplayName(d, i18n.language)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+            {allLoading ? (
+              <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+            ) : filteredTableCards.length === 0 && tableSearch.trim() ? (
+              <p className="p-6 text-center text-sm text-muted-foreground">{t("wordTable.noResults")}</p>
+            ) : (
+              <WordTable cards={filteredTableCards} onMark={setOwnMark} markBasis="own" />
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ── MODE PICK (cards vs quiz) for a specific deck ──
+  if (view.kind === "mode-pick") {
+    const deckLabel = deckDisplayName(view.deck, i18n.language)
+    return (
+      <div className="mx-auto max-w-md space-y-4">
+        <Button variant="ghost" size="sm" onClick={() => setView({ kind: "deck-list" })}>
+          {t("dashboard.backToDecks")}
+        </Button>
+        <h1 className="text-lg font-semibold">{deckLabel}</h1>
+        <p className="text-sm text-muted-foreground">{t("dashboard.cardsLoaded", { count: formatCount(view.cards.length) })}</p>
+        <div className="grid grid-cols-2 gap-3">
+          <ModeCard
+            icon="🃏"
+            title={t("dashboard.modeCardsTitle")}
+            desc={t("dashboard.modeCardsDesc")}
+            onClick={() => goToStudySetup("cards", view.cards, deckLabel)}
+          />
+          <ModeCard
+            icon="✏️"
+            title={t("dashboard.modeQuizTitle")}
+            desc={t("dashboard.modeQuizDesc")}
+            onClick={() => goToStudySetup("quiz", view.cards, deckLabel)}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  // ── GROUP PICK (by topic, when the set spans more than one) ──
+  if (view.kind === "group-pick") {
+    const groups = groupCardsByTopic(view.cards, i18n.language)
+    return (
+      <div className="mx-auto max-w-2xl space-y-4">
+        <Button variant="ghost" size="sm" onClick={() => setView({ kind: "deck-list" })}>
+          {t("common.back")}
+        </Button>
+        <h1 className="text-lg font-semibold">
+          {view.label} — {view.mode === "cards" ? t("dashboard.modeCardsTitle") : t("dashboard.modeQuizTitle")}
+        </h1>
+        <GroupPicker
+          groups={groups}
+          onSelectGroup={(g: CardGroup) =>
+            setView({
+              kind: "level-pick",
+              mode: view.mode,
+              cards: g.cards,
+              label: `${view.label} · ${g.name || t("groupPicker.noGroup")}`,
+            })
+          }
+          onSelectAll={() => setView({ kind: "level-pick", mode: view.mode, cards: view.cards, label: view.label })}
+        />
+      </div>
+    )
+  }
+
+  // ── LEVEL PICK ──
+  if (view.kind === "level-pick") {
+    return (
+      <div className="mx-auto max-w-2xl space-y-4">
+        <Button variant="ghost" size="sm" onClick={() => setView({ kind: "deck-list" })}>
+          {t("common.back")}
+        </Button>
+        <h1 className="text-lg font-semibold">
+          {view.label} — {view.mode === "cards" ? t("dashboard.modeCardsTitle") : t("dashboard.modeQuizTitle")}
+        </h1>
+        <LevelPicker
+          items={view.cards}
+          levelSize={levelSize}
+          onLevelSizeChange={setLevelSize}
+          onSelectLevel={(lvl, i) =>
+            setView({
+              kind: "study",
+              mode: view.mode,
+              cards: lvl,
+              label: `${view.label} · ${t("levelPicker.levelLabel", { n: i + 1 })}`,
+            })
+          }
+          onSelectAll={() => setView({ kind: "study", mode: view.mode, cards: view.cards, label: view.label })}
+        />
+      </div>
+    )
+  }
+
+  // ── STUDY (flashcards) ──
+  if (view.kind === "study" && view.mode === "cards") {
+    return (
+      <FlashcardStudy
+        cards={view.cards}
+        label={view.label}
+        onExit={() => setView({ kind: "deck-list" })}
+        onFinish={(good, bad) => setView({ kind: "done", mode: "cards", good, bad, label: view.label })}
+      />
+    )
+  }
+
+  // ── STUDY (quiz) ──
+  if (view.kind === "study" && view.mode === "quiz") {
+    return (
+      <QuizSession
+        cards={view.cards}
+        onExit={() => setView({ kind: "deck-list" })}
+        onFinish={({ correct, wrong }) =>
+          setView({ kind: "done", mode: "quiz", good: correct, bad: wrong, label: view.label })
+        }
+      />
+    )
+  }
+
+  // ── DONE ──
+  if (view.kind === "done") {
+    const total = view.good.length + view.bad.length
+    const pct = total > 0 ? Math.round((view.good.length / total) * 100) : 0
+    return (
+      <div className="mx-auto max-w-sm space-y-4 text-center py-8">
+        <Fireworks />
+        <div className="text-4xl">🏆</div>
+        <h1 className="text-xl font-semibold">{pct === 100 ? t("dashboard.allKnown") : t("dashboard.roundDone")}</h1>
+        <p className="text-sm text-muted-foreground">
+          {view.mode === "cards"
+            ? t("dashboard.doneSummary", { label: view.label, pct })
+            : t("dashboard.doneSummaryQuiz", { label: view.label, pct })}
+        </p>
+        <div className="flex justify-center gap-3">
+          <StatPill
+            label={view.mode === "cards" ? t("stats.know") : t("stats.correct")}
+            value={view.good.length}
+            tone="success"
+          />
+          <StatPill
+            label={view.mode === "cards" ? t("stats.learning") : t("stats.errors")}
+            value={view.bad.length}
+            tone="destructive"
+          />
+        </div>
+        <div className="flex flex-wrap justify-center gap-2 pt-2">
+          <Button variant="outline" onClick={() => setView({ kind: "deck-list" })}>
+            {t("dashboard.backToDecks")}
+          </Button>
+          {view.bad.length > 0 && (
+            <Button
+              variant="outline"
+              className="text-destructive border-destructive/40 hover:bg-destructive/10"
+              onClick={() =>
+                setView({ kind: "study", mode: view.mode, cards: view.bad, label: t("dashboard.errorsRetryLabel") })
+              }
+            >
+              {t("dashboard.retryErrors")}
+            </Button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  return null
+}
+
+function DeckFilterButton({
+  active,
+  onClick,
+  label,
+}: {
+  active: boolean
+  onClick: () => void
+  label: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "rounded-full border px-3 py-1 text-xs",
+        active ? "bg-foreground text-background border-foreground" : "text-muted-foreground"
+      )}
+    >
+      {label}
+    </button>
+  )
+}
+
+function ModeCard({ icon, title, desc, onClick }: { icon: string; title: string; desc: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="rounded-lg border p-4 text-left transition-colors hover:border-foreground/40 hover:bg-muted/40"
+    >
+      <div className="mb-2 text-2xl">{icon}</div>
+      <div className="text-sm font-medium">{title}</div>
+      <div className="text-xs text-muted-foreground">{desc}</div>
+    </button>
+  )
+}
+
+function StatPill({ label, value, tone }: { label: string; value: number; tone: "success" | "destructive" }) {
+  return (
+    <div className="rounded-lg border px-4 py-2">
+      <div className={tone === "success" ? "text-2xl font-medium text-success" : "text-2xl font-medium text-destructive"}>
+        {value}
+      </div>
+      <div className="text-[10px] text-muted-foreground">{label}</div>
+    </div>
+  )
+}
+
+function DeckRow({
+  deckId,
+  name,
+  onOpen,
+  onDelete,
+  onAddCards,
+}: {
+  deckId: string
+  name: string
+  onOpen: (cards: CardWithMarks[]) => void
+  onDelete: () => void
+  onAddCards: (
+    rows: any,
+    onProgress?: (done: number, total: number) => void
+  ) => Promise<{ error: string | null }>
+}) {
+  const { t } = useTranslation()
+  const { cards } = useCards(deckId)
+  const isEmpty = cards.length === 0
+  return (
+    <div className="flex items-center justify-between rounded-lg border p-3">
+      <button className="flex-1 text-left" onClick={() => onOpen(cards)} disabled={isEmpty}>
+        <div className="text-sm font-medium">{name}</div>
+        <div className="text-xs text-muted-foreground">
+          {isEmpty ? t("dashboard.emptyDeckHint") : t("common.wordsCount", { count: formatCount(cards.length) })}
+        </div>
+      </button>
+      <div className="flex items-center gap-1">
+        <UploadDialog
+          onUpload={async (rows, _deckName, onProgress) => {
+            return await onAddCards(rows, onProgress)
+          }}
+          trigger={
+            <Button size="sm" variant={isEmpty ? "default" : "ghost"}>
+              {isEmpty ? t("dashboard.addFirstWords") : t("dashboard.addWords")}
+            </Button>
+          }
+        />
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive">
+              {t("common.delete")}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("dashboard.deleteDeckTitle", { name })}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("dashboard.deleteDeckDesc", { count: formatCount(cards.length) })}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+              <AlertDialogAction onClick={onDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                {t("common.delete")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </div>
+  )
+}
+
+function FlashcardStudy({
+  cards,
+  label,
+  onExit,
+  onFinish,
+}: {
+  cards: CardWithMarks[]
+  label: string
+  onExit: () => void
+  onFinish: (good: CardWithMarks[], bad: CardWithMarks[]) => void
+}) {
+  const { t } = useTranslation()
+  const [deck] = React.useState(() => [...cards].sort(() => Math.random() - 0.5))
+  const [cur, setCur] = React.useState(0)
+  const [flipped, setFlipped] = React.useState(false)
+  const [good, setGood] = React.useState<CardWithMarks[]>([])
+  const [bad, setBad] = React.useState<CardWithMarks[]>([])
+
+  const total = deck.length
+
+  React.useEffect(() => {
+    if (cur >= total) onFinish(good, bad)
+  }, [cur, total]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (cur >= total) return null
+
+  const card = deck[cur]
+
+  const answer = (know: boolean) => {
+    if (know) setGood((g) => [...g, card])
+    else setBad((b) => [...b, card])
+    setFlipped(false)
+    setCur((c) => c + 1)
+  }
+
+  return (
+    <div className="mx-auto max-w-md space-y-4">
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="sm" onClick={onExit}>
+          {t("common.back")}
+        </Button>
+        <Progress value={Math.round((cur / total) * 100)} className="flex-1" />
+        <span className="text-xs text-muted-foreground whitespace-nowrap">
+          {cur + 1} / {total}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        <StatPill label={t("stats.know")} value={good.length} tone="success" />
+        <div className="rounded-lg bg-muted/50 p-2.5 text-center">
+          <div className="text-lg font-medium">{total - cur}</div>
+          <div className="text-[10px] text-muted-foreground">{t("stats.remaining")}</div>
+        </div>
+        <StatPill label={t("stats.learning")} value={bad.length} tone="destructive" />
+      </div>
+
+      <Flashcard card={card} flipped={flipped} onToggle={() => setFlipped((f) => !f)} />
+
+      <p className="text-center text-xs text-muted-foreground">
+        {flipped ? t("dashboard.flipBack") : t("dashboard.flipForward")}
+      </p>
+
+      {flipped && (
+        <div className="flex gap-2.5">
+          <Button
+            variant="outline"
+            className="flex-1 border-destructive/40 text-destructive hover:bg-destructive/10"
+            onClick={() => answer(false)}
+          >
+            {t("dashboard.stillLearning")}
+          </Button>
+          <Button
+            variant="outline"
+            className="flex-1 border-success/40 text-success hover:bg-success/10"
+            onClick={() => answer(true)}
+          >
+            {t("dashboard.know")}
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+}
