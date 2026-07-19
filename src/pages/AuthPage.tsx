@@ -1,5 +1,5 @@
 import * as React from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import { useAuth } from "@/hooks/useAuth"
 import { Button } from "@/components/ui/button"
@@ -14,17 +14,26 @@ import { toast } from "sonner"
 const HERO_IMAGE_URL =
   "https://images.unsplash.com/photo-1519452575417-564c1401ecc0?auto=format&fit=crop&w=1400&q=80"
 
+function safeNextPath(raw: string | null): string {
+  if (!raw) return "/"
+  // Only allow same-origin relative paths (blocks open redirects).
+  if (!raw.startsWith("/") || raw.startsWith("//")) return "/"
+  return raw
+}
+
 export default function AuthPage() {
   const { signIn, signUp, user, requestPasswordReset } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { t } = useTranslation()
   const [loading, setLoading] = React.useState(false)
   const [forgotOpen, setForgotOpen] = React.useState(false)
   const [resetSent, setResetSent] = React.useState(false)
+  const nextPath = safeNextPath(searchParams.get("next"))
 
   React.useEffect(() => {
-    if (user) navigate("/", { replace: true })
-  }, [user, navigate])
+    if (user) navigate(nextPath, { replace: true })
+  }, [user, navigate, nextPath])
 
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()

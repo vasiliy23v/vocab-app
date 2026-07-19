@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import { Link } from "react-router-dom"
+import { getAppOrigin } from "@/lib/appUrl"
 
 function initials(name: string | null, email: string) {
   return (name || email).slice(0, 2).toUpperCase()
@@ -48,7 +49,7 @@ export default function PeoplePage() {
     }
   }
 
-  const inviteLink = invite ? `${window.location.origin}/invite/${invite}` : null
+  const inviteLink = invite ? `${getAppOrigin()}/invite/${invite}` : null
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">

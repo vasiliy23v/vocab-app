@@ -1,6 +1,7 @@
 import * as React from "react"
-import type { Session, User } from "@supabase/supabase-js"
+import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js"
 import { authRedirectTo } from "@/lib/appUrl"
+import { getAuthCallbackError, hasAuthCallbackInUrl } from "@/lib/authCallback"
 import { supabase } from "@/lib/supabase"
 import type { Profile } from "@/types/db"
 
@@ -9,6 +10,7 @@ interface AuthContextValue {
   user: User | null
   profile: Profile | null
   loading: boolean
+  authEvent: AuthChangeEvent | null
   signUp: (email: string, password: string, displayName: string) => Promise<{ error: string | null }>
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
@@ -23,6 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = React.useState<Session | null>(null)
   const [profile, setProfile] = React.useState<Profile | null>(null)
   const [loading, setLoading] = React.useState(true)
+  const [authEvent, setAuthEvent] = React.useState<AuthChangeEvent | null>(null)
 
   const fetchProfile = React.useCallback(async (user: User) => {
     const { data, error } = await supabase
@@ -58,22 +61,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   React.useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-      if (data.session?.user) fetchProfile(data.session.user)
-      setLoading(false)
-    })
+    let cancelled = false
+    const awaitingCallback = hasAuthCallbackInUrl()
+    const callbackError = getAuthCallbackError()
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (cancelled) return
+      setAuthEvent(event)
       setSession(newSession)
       if (newSession?.user) {
-        fetchProfile(newSession.user)
+        void fetchProfile(newSession.user)
       } else {
         setProfile(null)
       }
+
+      // INITIAL_SESSION fires after URL hash/code is parsed — safe to stop loading.
+      if (
+        event === "INITIAL_SESSION" ||
+        event === "SIGNED_IN" ||
+        event === "SIGNED_OUT" ||
+        event === "PASSWORD_RECOVERY"
+      ) {
+        setLoading(false)
+      }
     })
 
-    return () => listener.subscription.unsubscribe()
+    // Fallback if INITIAL_SESSION is delayed or missing (older clients / edge cases).
+    void supabase.auth.getSession().then(({ data }) => {
+      if (cancelled) return
+      if (data.session) {
+        setSession(data.session)
+        void fetchProfile(data.session.user)
+        setLoading(false)
+        return
+      }
+      if (!awaitingCallback || callbackError) {
+        setLoading(false)
+      }
+    })
+
+    const timeout = window.setTimeout(() => {
+      if (!cancelled) setLoading(false)
+    }, 2500)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timeout)
+      listener.subscription.unsubscribe()
+    }
   }, [fetchProfile])
 
   const signUp = async (email: string, password: string, displayName: string) => {
@@ -117,6 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user: session?.user ?? null,
     profile,
     loading,
+    authEvent,
     signUp,
     signIn,
     signOut,
