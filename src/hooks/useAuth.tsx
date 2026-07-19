@@ -1,5 +1,6 @@
 import * as React from "react"
 import type { Session, User } from "@supabase/supabase-js"
+import { authRedirectTo } from "@/lib/appUrl"
 import { supabase } from "@/lib/supabase"
 import type { Profile } from "@/types/db"
 
@@ -79,7 +80,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { display_name: displayName } },
+      options: {
+        data: { display_name: displayName },
+        emailRedirectTo: authRedirectTo("/"),
+      },
     })
     return { error: error?.message ?? null }
   }
@@ -98,7 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const requestPasswordReset = async (email: string) => {
-    const redirectTo = `${window.location.origin}/reset-password`
+    const redirectTo = authRedirectTo("/reset-password")
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
     return { error: error?.message ?? null }
   }
