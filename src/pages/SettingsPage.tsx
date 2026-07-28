@@ -2,6 +2,7 @@ import * as React from "react"
 import { useTranslation } from "react-i18next"
 import { useAuth } from "@/hooks/useAuth"
 import { LanguagePairSelector } from "@/components/LanguagePairSelector"
+import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import type { Language } from "@/types/db"
 import { Switch } from "@/components/ui/switch"
 
@@ -38,10 +39,17 @@ export default function SettingsPage() {
       </div>
 
       <div className="space-y-4">
-        {/* Language Pair Section */}
+        {/* UI Language Section */}
+        <div className="rounded-lg border p-4">
+          <h3 className="mb-3 font-semibold">{t("language.label")}</h3>
+          <p className="mb-3 text-sm text-muted-foreground">{t("settings.languageDesc")}</p>
+          <LanguageSwitcher />
+        </div>
+
+        {/* Learning Language Pair Section */}
         {languageFromTemp && languageToTemp && (
           <div className="rounded-lg border p-4">
-            <h2 className="mb-4 font-semibold">{t("languagePair.title")}</h2>
+            <h3 className="mb-4 font-semibold">{t("languagePair.title")}</h3>
             <LanguagePairSelector
               from={languageFromTemp}
               to={languageToTemp}

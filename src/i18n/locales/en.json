@@ -264,6 +264,9 @@
     "save": "Save",
     "saving": "Saving…"
   },
+  "settings": {
+    "languageDesc": "Choose the language for the app interface"
+  },
   "resetPassword": {
     "title": "Set a new password",
     "subtitle": "Choose a new password for your account.",

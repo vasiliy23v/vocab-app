@@ -219,7 +219,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         <button
           type="button"
-          onClick={() => navigate("/settings")}
+          onClick={() => {
+            navigate("/settings")
+            onNavigate?.()
+          }}
           className="flex w-full items-center gap-2.5 rounded-lg border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <Settings className="h-4 w-4 shrink-0" />

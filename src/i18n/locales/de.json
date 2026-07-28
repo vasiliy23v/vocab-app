@@ -264,6 +264,9 @@
     "save": "Speichern",
     "saving": "Wird gespeichert..."
   },
+  "settings": {
+    "languageDesc": "Wählen Sie die Sprache für die App-Oberfläche"
+  },
   "resetPassword": {
     "title": "Neues Passwort festlegen",
     "subtitle": "Wählen Sie ein neues Passwort für Ihr Konto.",
