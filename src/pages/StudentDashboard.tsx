@@ -6,16 +6,19 @@ import { useDashboardSection } from "@/hooks/useDashboardSection"
 import { UploadDialog } from "@/components/UploadDialog"
 import { Flashcard } from "@/components/Flashcard"
 import { LevelPicker } from "@/components/LevelPicker"
-import { GroupPicker } from "@/components/GroupPicker"
 import { QuizSession } from "@/components/QuizSession"
 import { WordTable } from "@/components/WordTable"
 import { Fireworks } from "@/components/Fireworks"
+import { StudyProgressBar, useProgressFlash } from "@/components/StudyProgressBar"
+import { ExitStudyDialog } from "@/components/ExitStudyDialog"
+import { useStudyVibrate } from "@/hooks/useStudyVibrate"
+import { useStudyStreak } from "@/hooks/useStudyStreak"
+import { useDailyGoal } from "@/hooks/useDailyGoal"
 import { formatCount } from "@/lib/formatCount"
-import { groupCardsByTopic, hasMultipleTopics, type CardGroup } from "@/lib/groupCards"
+import { isLevelCleared } from "@/lib/cardStatus"
 import { cardTranslation, cardDescription, deckName as deckDisplayName } from "@/lib/cardTranslation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Progress } from "@/components/ui/progress"
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -23,12 +26,12 @@ import {
 import type { CardWithMarks, Deck, MarkStatus } from "@/types/db"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { Vibrate, VibrateOff } from "lucide-react"
 
 type View =
   | { kind: "deck-list" }
   | { kind: "mode-pick"; deck: Deck; cards: CardWithMarks[] }
   | { kind: "review-mode-pick" }
-  | { kind: "group-pick"; mode: "cards" | "quiz"; cards: CardWithMarks[]; label: string }
   | { kind: "level-pick"; mode: "cards" | "quiz"; cards: CardWithMarks[]; label: string }
   | { kind: "study"; mode: "cards" | "quiz"; cards: CardWithMarks[]; label: string }
   | { kind: "done"; mode: "cards" | "quiz"; good: CardWithMarks[]; bad: CardWithMarks[]; label: string }
@@ -37,9 +40,11 @@ export default function StudentDashboard() {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const { decks, createDeck, deleteDeck } = useDecks(user?.id ?? null)
-  const { section, cards, reviewQueue, masteredCards, loading: allLoading, setOwnMark } = useDashboardSection()
+  const { section, cards, newCards, reviewQueue, masteredCards, loading: allLoading, setOwnMark, setGoalDialogOpen } =
+    useDashboardSection()
+  const { streak, bump: bumpStreak } = useStudyStreak()
+  const { wordsPerDay } = useDailyGoal()
   const [view, setView] = React.useState<View>({ kind: "deck-list" })
-  const [levelSize, setLevelSize] = React.useState(20)
   const [activeDeckId, setActiveDeckId] = React.useState<string | null>(null)
   const [tableDeckId, setTableDeckId] = React.useState<string>("all")
   const [tableSearch, setTableSearch] = React.useState("")
@@ -108,15 +113,10 @@ export default function StudentDashboard() {
     return await addCards(rows, user.id, deckId, onProgress)
   }
 
-  /** Cards/Quiz was picked for some set of cards — if it spans more
-   *  than one topic, let the student pick a topic first; otherwise go
-   *  straight to the usual count-based level picker. */
+  /** Cards/Quiz was picked for some set of cards — go straight to the
+   *  leveled path, no extra topic-picking step in between. */
   const goToStudySetup = (mode: "cards" | "quiz", cardsToStudy: CardWithMarks[], label: string) => {
-    if (hasMultipleTopics(cardsToStudy)) {
-      setView({ kind: "group-pick", mode, cards: cardsToStudy, label })
-    } else {
-      setView({ kind: "level-pick", mode, cards: cardsToStudy, label })
-    }
+    setView({ kind: "level-pick", mode, cards: cardsToStudy, label })
   }
 
   // ── DECK LIST (the dashboard's default/home section) ──
@@ -155,7 +155,7 @@ export default function StudentDashboard() {
 
     return (
       <div className="mx-auto max-w-4xl space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h1 className="text-xl font-semibold">{sectionTitle}</h1>
           <UploadDialog askDeckName onUpload={handleCreateDeckUpload} />
         </div>
@@ -182,21 +182,47 @@ export default function StudentDashboard() {
         {section === "review" &&
           (allLoading ? (
             <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
-          ) : reviewQueue.length === 0 ? (
+          ) : newCards.length === 0 && reviewQueue.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               {cards.length === 0 ? t("dashboard.reviewEmptyNoCards") : t("dashboard.reviewEmpty")}
             </p>
           ) : (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">{t("dashboard.reviewDesc")}</p>
-              <div className="flex gap-2">
-                <Button onClick={() => goToStudySetup("cards", reviewQueue, t("dashboard.review"))}>
-                  {t("dashboard.cardsButton", { count: formatCount(reviewQueue.length) })}
-                </Button>
-                <Button variant="outline" onClick={() => goToStudySetup("quiz", reviewQueue, t("dashboard.review"))}>
-                  {t("dashboard.quizButton")}
-                </Button>
-              </div>
+            <div className="space-y-6">
+              {newCards.length > 0 && (
+                <div className="space-y-3">
+                  <div>
+                    <h2 className="text-sm font-medium">{t("dashboard.newWords")}</h2>
+                    <p className="text-sm text-muted-foreground">{t("dashboard.newWordsDesc")}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={() => goToStudySetup("cards", newCards, t("dashboard.newWords"))}>
+                      {t("dashboard.cardsButton", { count: formatCount(newCards.length) })}
+                    </Button>
+                    <Button variant="outline" onClick={() => goToStudySetup("quiz", newCards, t("dashboard.newWords"))}>
+                      {t("dashboard.quizButton")}
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {reviewQueue.length > 0 && (
+                <div className="space-y-3">
+                  <div>
+                    <h2 className="text-sm font-medium">{t("dashboard.reviewWords")}</h2>
+                    <p className="text-sm text-muted-foreground">{t("dashboard.reviewWordsDesc")}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={() => goToStudySetup("cards", reviewQueue, t("dashboard.reviewWords"))}>
+                      {t("dashboard.cardsButton", { count: formatCount(reviewQueue.length) })}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => goToStudySetup("quiz", reviewQueue, t("dashboard.reviewWords"))}
+                    >
+                      {t("dashboard.quizButton")}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
 
@@ -287,35 +313,9 @@ export default function StudentDashboard() {
     )
   }
 
-  // ── GROUP PICK (by topic, when the set spans more than one) ──
-  if (view.kind === "group-pick") {
-    const groups = groupCardsByTopic(view.cards, i18n.language)
-    return (
-      <div className="mx-auto max-w-2xl space-y-4">
-        <Button variant="ghost" size="sm" onClick={() => setView({ kind: "deck-list" })}>
-          {t("common.back")}
-        </Button>
-        <h1 className="text-lg font-semibold">
-          {view.label} — {view.mode === "cards" ? t("dashboard.modeCardsTitle") : t("dashboard.modeQuizTitle")}
-        </h1>
-        <GroupPicker
-          groups={groups}
-          onSelectGroup={(g: CardGroup) =>
-            setView({
-              kind: "level-pick",
-              mode: view.mode,
-              cards: g.cards,
-              label: `${view.label} · ${g.name || t("groupPicker.noGroup")}`,
-            })
-          }
-          onSelectAll={() => setView({ kind: "level-pick", mode: view.mode, cards: view.cards, label: view.label })}
-        />
-      </div>
-    )
-  }
-
   // ── LEVEL PICK ──
   if (view.kind === "level-pick") {
+    const levelSize = wordsPerDay ?? 20
     return (
       <div className="mx-auto max-w-2xl space-y-4">
         <Button variant="ghost" size="sm" onClick={() => setView({ kind: "deck-list" })}>
@@ -327,7 +327,19 @@ export default function StudentDashboard() {
         <LevelPicker
           items={view.cards}
           levelSize={levelSize}
-          onLevelSizeChange={setLevelSize}
+          isLevelComplete={isLevelCleared}
+          renderSizeControl={() => (
+            <span className="text-xs text-muted-foreground">
+              {t("dailyGoal.perLevel", { n: levelSize })} ·{" "}
+              <button
+                type="button"
+                onClick={() => setGoalDialogOpen(true)}
+                className="underline underline-offset-2 hover:text-foreground"
+              >
+                {t("dailyGoal.change")}
+              </button>
+            </span>
+          )}
           onSelectLevel={(lvl, i) =>
             setView({
               kind: "study",
@@ -349,7 +361,13 @@ export default function StudentDashboard() {
         cards={view.cards}
         label={view.label}
         onExit={() => setView({ kind: "deck-list" })}
-        onFinish={(good, bad) => setView({ kind: "done", mode: "cards", good, bad, label: view.label })}
+        onMark={(cardId, status) => {
+          void setOwnMark(cardId, status)
+        }}
+        onFinish={(good, bad) => {
+          void bumpStreak()
+          setView({ kind: "done", mode: "cards", good, bad, label: view.label })
+        }}
       />
     )
   }
@@ -360,54 +378,48 @@ export default function StudentDashboard() {
       <QuizSession
         cards={view.cards}
         onExit={() => setView({ kind: "deck-list" })}
-        onFinish={({ correct, wrong }) =>
+        onMark={(cardId, status) => {
+          void setOwnMark(cardId, status)
+        }}
+        onFinish={({ correct, wrong }) => {
+          void bumpStreak()
           setView({ kind: "done", mode: "quiz", good: correct, bad: wrong, label: view.label })
-        }
+        }}
       />
     )
   }
 
   // ── DONE ──
   if (view.kind === "done") {
-    const total = view.good.length + view.bad.length
-    const pct = total > 0 ? Math.round((view.good.length / total) * 100) : 0
+    const total = view.good.length
+    const hadMistakes = view.bad.length
     return (
       <div className="mx-auto max-w-sm space-y-4 text-center py-8">
         <Fireworks />
         <div className="text-4xl">🏆</div>
-        <h1 className="text-xl font-semibold">{pct === 100 ? t("dashboard.allKnown") : t("dashboard.roundDone")}</h1>
+        <h1 className="text-xl font-semibold">{t("dashboard.allKnown")}</h1>
         <p className="text-sm text-muted-foreground">
-          {view.mode === "cards"
-            ? t("dashboard.doneSummary", { label: view.label, pct })
-            : t("dashboard.doneSummaryQuiz", { label: view.label, pct })}
+          {hadMistakes > 0
+            ? t("study.doneWithMistakes", { label: view.label, mistakes: hadMistakes, total })
+            : t("study.donePerfect", { label: view.label, total })}
         </p>
         <div className="flex justify-center gap-3">
-          <StatPill
-            label={view.mode === "cards" ? t("stats.know") : t("stats.correct")}
-            value={view.good.length}
-            tone="success"
-          />
-          <StatPill
-            label={view.mode === "cards" ? t("stats.learning") : t("stats.errors")}
-            value={view.bad.length}
-            tone="destructive"
-          />
+          <StatPill label={t("stats.know")} value={view.good.length} tone="success" />
+          {hadMistakes > 0 && (
+            <StatPill label={t("stats.learning")} value={hadMistakes} tone="destructive" />
+          )}
         </div>
+        {streak > 0 && (
+          <div className="mx-auto flex w-fit items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-1.5 text-sm font-medium text-orange-700 dark:border-orange-900 dark:bg-orange-950 dark:text-orange-300">
+            <span>🔥</span>
+            <span>{t("study.streakDays", { count: streak })}</span>
+          </div>
+        )}
+        <p className="text-xs text-muted-foreground">{t("study.streakNudge")}</p>
         <div className="flex flex-wrap justify-center gap-2 pt-2">
           <Button variant="outline" onClick={() => setView({ kind: "deck-list" })}>
             {t("dashboard.backToDecks")}
           </Button>
-          {view.bad.length > 0 && (
-            <Button
-              variant="outline"
-              className="text-destructive border-destructive/40 hover:bg-destructive/10"
-              onClick={() =>
-                setView({ kind: "study", mode: view.mode, cards: view.bad, label: t("dashboard.errorsRetryLabel") })
-              }
-            >
-              {t("dashboard.retryErrors")}
-            </Button>
-          )}
         </div>
       </div>
     )
@@ -529,58 +541,87 @@ function DeckRow({
 
 function FlashcardStudy({
   cards,
-  label,
+  label: _label,
   onExit,
+  onMark,
   onFinish,
 }: {
   cards: CardWithMarks[]
   label: string
   onExit: () => void
+  onMark?: (cardId: string, status: MarkStatus) => void
   onFinish: (good: CardWithMarks[], bad: CardWithMarks[]) => void
 }) {
   const { t } = useTranslation()
-  const [deck] = React.useState(() => [...cards].sort(() => Math.random() - 0.5))
-  const [cur, setCur] = React.useState(0)
+  const initialTotal = cards.length
+  const [queue, setQueue] = React.useState(() => [...cards].sort(() => Math.random() - 0.5))
+  const [known, setKnown] = React.useState<CardWithMarks[]>([])
+  const [missedIds, setMissedIds] = React.useState<Set<string>>(() => new Set())
   const [flipped, setFlipped] = React.useState(false)
-  const [good, setGood] = React.useState<CardWithMarks[]>([])
-  const [bad, setBad] = React.useState<CardWithMarks[]>([])
+  const [exitOpen, setExitOpen] = React.useState(false)
+  const [finishing, setFinishing] = React.useState(false)
+  const { flash, trigger: triggerFlash } = useProgressFlash()
+  const { enabled: vibrateOn, setEnabled: setVibrateOn, buzzIfEnabled } = useStudyVibrate()
 
-  const total = deck.length
+  const card = queue[0]
+  const progressPct = initialTotal > 0 ? Math.round((known.length / initialTotal) * 100) : 0
+  const learningCount = queue.filter((c) => missedIds.has(c.id)).length
+  const dirty = known.length > 0 || missedIds.size > 0 || flipped
 
   React.useEffect(() => {
-    if (cur >= total) onFinish(good, bad)
-  }, [cur, total]) // eslint-disable-line react-hooks/exhaustive-deps
+    if (finishing || queue.length > 0 || known.length === 0) return
+    setFinishing(true)
+    for (const c of known) onMark?.(c.id, "known")
+    const hadMistakes = known.filter((c) => missedIds.has(c.id))
+    onFinish(known, hadMistakes)
+  }, [queue.length, known, missedIds, onFinish, onMark, finishing])
 
-  if (cur >= total) return null
-
-  const card = deck[cur]
+  if (!card || finishing) return null
 
   const answer = (know: boolean) => {
-    if (know) setGood((g) => [...g, card])
-    else setBad((b) => [...b, card])
+    if (know) {
+      triggerFlash("success")
+      buzzIfEnabled()
+      setKnown((k) => [...k, card])
+      setQueue((q) => q.slice(1))
+    } else {
+      triggerFlash("destructive")
+      setMissedIds((prev) => new Set(prev).add(card.id))
+      setQueue((q) => [...q.slice(1), card])
+    }
     setFlipped(false)
-    setCur((c) => c + 1)
   }
 
   return (
     <div className="mx-auto max-w-md space-y-4">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={onExit}>
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="sm" onClick={() => (dirty ? setExitOpen(true) : onExit())}>
           {t("common.back")}
         </Button>
-        <Progress value={Math.round((cur / total) * 100)} className="flex-1" />
+        <StudyProgressBar value={progressPct} flash={flash} />
         <span className="text-xs text-muted-foreground whitespace-nowrap">
-          {cur + 1} / {total}
+          {known.length} / {initialTotal}
         </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0"
+          title={vibrateOn ? t("study.vibrateOn") : t("study.vibrateOff")}
+          aria-label={vibrateOn ? t("study.vibrateOn") : t("study.vibrateOff")}
+          onClick={() => void setVibrateOn(!vibrateOn)}
+        >
+          {vibrateOn ? <Vibrate className="h-4 w-4" /> : <VibrateOff className="h-4 w-4 text-muted-foreground" />}
+        </Button>
       </div>
 
       <div className="grid grid-cols-3 gap-2">
-        <StatPill label={t("stats.know")} value={good.length} tone="success" />
+        <StatPill label={t("stats.know")} value={known.length} tone="success" />
         <div className="rounded-lg bg-muted/50 p-2.5 text-center">
-          <div className="text-lg font-medium">{total - cur}</div>
+          <div className="text-lg font-medium">{queue.length}</div>
           <div className="text-[10px] text-muted-foreground">{t("stats.remaining")}</div>
         </div>
-        <StatPill label={t("stats.learning")} value={bad.length} tone="destructive" />
+        <StatPill label={t("stats.learning")} value={learningCount} tone="destructive" />
       </div>
 
       <Flashcard card={card} flipped={flipped} onToggle={() => setFlipped((f) => !f)} />
@@ -589,24 +630,24 @@ function FlashcardStudy({
         {flipped ? t("dashboard.flipBack") : t("dashboard.flipForward")}
       </p>
 
-      {flipped && (
-        <div className="flex gap-2.5">
-          <Button
-            variant="outline"
-            className="flex-1 border-destructive/40 text-destructive hover:bg-destructive/10"
-            onClick={() => answer(false)}
-          >
-            {t("dashboard.stillLearning")}
-          </Button>
-          <Button
-            variant="outline"
-            className="flex-1 border-success/40 text-success hover:bg-success/10"
-            onClick={() => answer(true)}
-          >
-            {t("dashboard.know")}
-          </Button>
-        </div>
-      )}
+      <div className="flex gap-2.5">
+        <Button
+          variant="outline"
+          className="flex-1 border-destructive/40 text-destructive hover:bg-destructive/10"
+          onClick={() => answer(false)}
+        >
+          {t("dashboard.stillLearning")}
+        </Button>
+        <Button
+          variant="outline"
+          className="flex-1 border-success/40 text-success hover:bg-success/10"
+          onClick={() => answer(true)}
+        >
+          {t("dashboard.know")}
+        </Button>
+      </div>
+
+      <ExitStudyDialog open={exitOpen} onOpenChange={setExitOpen} onConfirm={onExit} />
     </div>
   )
 }

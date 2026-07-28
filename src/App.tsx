@@ -5,12 +5,7 @@ import { toast } from "sonner"
 import { AuthProvider, useAuth } from "@/hooks/useAuth"
 import { useIsSuperadmin } from "@/hooks/useAdmin"
 import { DashboardSectionProvider } from "@/hooks/useDashboardSection"
-import {
-  getAuthCallbackError,
-  getAuthCallbackType,
-  hasAuthCallbackInUrl,
-  passwordSetupTypes,
-} from "@/lib/authCallback"
+import { needsPasswordSetup } from "@/lib/authCallback"
 import AppLayout from "@/components/AppLayout"
 import AuthPage from "@/pages/AuthPage"
 import InvitePage from "@/pages/InvitePage"
@@ -20,15 +15,15 @@ import TeacherStudentPage from "@/pages/TeacherStudentPage"
 import AdminDashboard from "@/pages/AdminDashboard"
 import ResetPasswordPage from "@/pages/ResetPasswordPage"
 import { Toaster } from "@/components/ui/sonner"
+import { PwaUpdatePrompt } from "@/components/PwaUpdatePrompt"
+import { PwaInstallPrompt } from "@/components/PwaInstallPrompt"
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   const location = useLocation()
   const { t } = useTranslation()
 
-  // Magic/invite links land on `/#access_token=…`. Do not bounce to /auth
-  // until the hash is consumed — Navigate would strip the tokens.
-  if (loading || (!user && hasAuthCallbackInUrl())) {
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
         {t("common.loading")}
@@ -51,33 +46,27 @@ function RequireAdmin({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
-/** Consume magic/invite/recovery callback and route to the right screen. */
+/** After invite/magic/recovery: send user to password setup or home. */
 function AuthCallbackHandler() {
-  const { user, loading, authEvent } = useAuth()
+  const { user, loading, authEvent, callbackType, callbackError } = useAuth()
   const navigate = useNavigate()
   const handled = React.useRef(false)
 
   React.useEffect(() => {
     if (loading || handled.current) return
-    if (!hasAuthCallbackInUrl() && authEvent !== "PASSWORD_RECOVERY") return
 
-    const error = getAuthCallbackError()
-    if (error) {
+    if (callbackError) {
       handled.current = true
-      toast.error(error)
+      toast.error(callbackError)
       navigate("/auth", { replace: true })
       return
     }
 
-    if (!user) return
+    if (!user || !callbackType) return
 
     handled.current = true
-    const type = getAuthCallbackType()
-    const needsPassword =
-      authEvent === "PASSWORD_RECOVERY" || (type != null && passwordSetupTypes().has(type))
-
-    navigate(needsPassword ? "/reset-password" : "/", { replace: true })
-  }, [user, loading, authEvent, navigate])
+    navigate(needsPasswordSetup(callbackType, authEvent) ? "/reset-password" : "/", { replace: true })
+  }, [user, loading, authEvent, callbackType, callbackError, navigate])
 
   return null
 }
@@ -136,6 +125,8 @@ export default function App() {
       <AuthProvider>
         <AppRoutes />
         <Toaster position="top-center" />
+        <PwaUpdatePrompt />
+        <PwaInstallPrompt />
       </AuthProvider>
     </BrowserRouter>
   )

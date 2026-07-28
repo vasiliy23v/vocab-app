@@ -16,7 +16,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: true,
+    // We parse invite/magic hash tokens ourselves — auto-detect hits /auth/v1/user
+    // which returns 403 for some invite access tokens and leaves the app stuck.
+    detectSessionInUrl: false,
     flowType: "implicit",
   },
 })

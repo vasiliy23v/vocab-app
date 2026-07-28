@@ -4,18 +4,61 @@ import { useTranslation } from "react-i18next"
 import { useAuth } from "@/hooks/useAuth"
 import { useIsSuperadmin } from "@/hooks/useAdmin"
 import { useDashboardSection, type DashboardSection } from "@/hooks/useDashboardSection"
+import { useStudyStreak } from "@/hooks/useStudyStreak"
+import { useDailyGoal } from "@/hooks/useDailyGoal"
+import { usePwaInstall } from "@/hooks/usePwaInstall"
+import { DailyGoalDialog } from "@/components/DailyGoalDialog"
 import { formatCount } from "@/lib/formatCount"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
-import { BookOpen, Users, ShieldCheck, LogOut, Menu } from "lucide-react"
+import { BookOpen, Users, ShieldCheck, LogOut, Menu, Download } from "lucide-react"
 
 function initials(name: string | null | undefined, email: string | undefined) {
   const base = name || email || "?"
   return base.slice(0, 2).toUpperCase()
+}
+
+function StreakBadge({ streak, compact }: { streak: number; compact?: boolean }) {
+  const { t } = useTranslation()
+  return (
+    <span
+      title={t("study.streakDays", { count: streak })}
+      className={cn(
+        "flex shrink-0 items-center gap-1 rounded-full border border-orange-200 bg-orange-50 font-medium text-orange-700 dark:border-orange-900 dark:bg-orange-950 dark:text-orange-300",
+        compact ? "px-1.5 py-0.5 text-[11px]" : "px-2 py-0.5 text-xs"
+      )}
+    >
+      <span aria-hidden>🔥</span>
+      {streak}
+    </span>
+  )
+}
+
+/** Durable way back to the install prompt after the one-time toast
+ *  (PwaInstallPrompt) — only renders while the browser can actually offer
+ *  it (unsupported browsers / already-installed just get nothing here). */
+function InstallAppLink({ onNavigate }: { onNavigate?: () => void }) {
+  const { t } = useTranslation()
+  const { canInstall, promptInstall } = usePwaInstall()
+  if (!canInstall) return null
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void promptInstall()
+        onNavigate?.()
+      }}
+      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+    >
+      <Download className="h-4 w-4 shrink-0" />
+      <span className="truncate">{t("pwa.installLink")}</span>
+    </button>
+  )
 }
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
@@ -73,13 +116,14 @@ function DashboardSecondaryNav({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()
-  const { section, setSection, reviewQueue, masteredCards, loading } = useDashboardSection()
+  const { section, setSection, newCards, reviewQueue, masteredCards, loading } = useDashboardSection()
+  const toLearnCount = newCards.length + reviewQueue.length
 
   const items: { key: DashboardSection; label: string; count?: string; tone?: "destructive" | "success" }[] = [
     {
       key: "review",
       label: t("dashboard.review"),
-      count: !loading && reviewQueue.length > 0 ? formatCount(reviewQueue.length) : undefined,
+      count: !loading && toLearnCount > 0 ? formatCount(toLearnCount) : undefined,
       tone: "destructive",
     },
     {
@@ -122,11 +166,19 @@ function DashboardSecondaryNav({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { profile, user, signOut } = useAuth()
+  const { profile, user, signOut, updateProfile, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const { t } = useTranslation()
   const [mobileOpen, setMobileOpen] = React.useState(false)
   const isSuperadmin = useIsSuperadmin()
+  const vibrateOn = profile?.vibrate_on_correct ?? true
+  const { streak } = useStudyStreak()
+  const { wordsPerDay } = useDailyGoal()
+  const { goalDialogOpen, setGoalDialogOpen } = useDashboardSection()
+  // wordsPerDay reads as null both "not chosen yet" and "profile still
+  // loading" — without the loading check this flashes open on every
+  // mount before the profile fetch resolves.
+  const goalDialogVisible = (!authLoading && wordsPerDay === null) || goalDialogOpen
 
   const handleSignOut = async () => {
     await signOut()
@@ -135,14 +187,39 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const sidebarBody = (
     <div className="flex h-full flex-col">
-      <Link to="/" className="mb-5 block px-1 font-semibold text-sm tracking-tight">
-        {t("appName")}
-      </Link>
+      <div className="mb-5 flex items-center justify-between gap-2 px-1">
+        <Link to="/" className="block font-semibold text-sm tracking-tight">
+          {t("appName")}
+        </Link>
+        {streak > 0 && <StreakBadge streak={streak} />}
+      </div>
 
       <NavLinks onNavigate={() => setMobileOpen(false)} />
+      <InstallAppLink onNavigate={() => setMobileOpen(false)} />
 
       <div className="mt-auto space-y-3 pt-4">
         <LanguageSwitcher />
+
+        <label className="flex cursor-pointer items-center justify-between gap-2 rounded-lg border px-2.5 py-2">
+          <span className="text-xs text-muted-foreground">{t("study.vibrateLabel")}</span>
+          <Switch
+            checked={vibrateOn}
+            onCheckedChange={(checked) => {
+              void updateProfile({ vibrate_on_correct: checked })
+            }}
+          />
+        </label>
+
+        <button
+          type="button"
+          onClick={() => setGoalDialogOpen(true)}
+          className="flex w-full items-center justify-between gap-2 rounded-lg border px-2.5 py-2 text-left hover:bg-muted/40"
+        >
+          <span className="text-xs text-muted-foreground">{t("dailyGoal.sidebarLabel")}</span>
+          <span className="text-xs font-medium">
+            {wordsPerDay !== null ? t("dailyGoal.perLevel", { n: wordsPerDay }) : t("dailyGoal.change")}
+          </span>
+        </button>
 
         <div className="flex items-center gap-2 rounded-lg border p-2">
           <Avatar className="h-8 w-8 shrink-0">
@@ -193,11 +270,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </SheetContent>
           </Sheet>
           <span className="font-semibold text-sm">{t("appName")}</span>
-          <div className="w-9" />
+          <div className="flex w-9 justify-end">{streak > 0 && <StreakBadge streak={streak} compact />}</div>
         </header>
 
         <main className="container flex-1 py-6 md:px-8">{children}</main>
       </div>
+
+      <DailyGoalDialog
+        open={goalDialogVisible}
+        onOpenChange={wordsPerDay === null ? undefined : setGoalDialogOpen}
+      />
     </div>
   )
 }

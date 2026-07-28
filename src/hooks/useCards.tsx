@@ -1,6 +1,7 @@
 import * as React from "react"
 import { supabase } from "@/lib/supabase"
 import { insertInBatches } from "@/lib/batchInsert"
+import { effectiveMarkStatus } from "@/lib/cardStatus"
 import type { CardWithMarks, Deck, MarkStatus, ParsedCardRow } from "@/types/db"
 
 export function useDecks(studentId: string | null) {
@@ -215,37 +216,46 @@ export function useAllStudentCards(studentId: string | null) {
     }
   }, [studentId, load])
 
-  /** A teacher's mark always wins; without one, the student's own
-   *  self-assessment counts instead (many students study solo with no
-   *  teacher linked at all, so relying on teacher_status alone would
-   *  mean nothing ever leaves the review queue for them). */
-  const effectiveStatus = (c: CardWithMarks): MarkStatus | null => c.teacher_status ?? c.own_status ?? null
+  /** Never marked — brand-new words the student hasn't assessed yet. */
+  const newCards = React.useMemo(
+    () => cards.filter((c) => effectiveMarkStatus(c) === null),
+    [cards]
+  )
 
-  /** Words marked unknown/repeat, OR with no mark at all. */
+  /** Words marked unknown/repeat — due for practice, not first-time learning. */
   const reviewQueue = React.useMemo(() => {
     return cards.filter((c) => {
-      const s = effectiveStatus(c)
-      return s === "unknown" || s === "repeat" || s === null
+      const s = effectiveMarkStatus(c)
+      return s === "unknown" || s === "repeat"
     })
   }, [cards])
 
   /** Words explicitly marked as known. */
-  const masteredCards = React.useMemo(() => cards.filter((c) => effectiveStatus(c) === "known"), [cards])
+  const masteredCards = React.useMemo(() => cards.filter((c) => effectiveMarkStatus(c) === "known"), [cards])
 
-  /** Student self-marking their own cards (e.g. from the word table).
+  /** Student self-marking their own cards (study session or word table).
    *  set_card_mark stores this as an own-mark (not a teacher mark)
-   *  automatically, since it checks whether the caller owns the card. */
-  const setOwnMark = async (cardId: string, status: MarkStatus) => {
+   *  automatically, since it checks whether the caller owns the card.
+   *  Optimistic local update so study answers stay snappy. */
+  const setOwnMark = React.useCallback(async (cardId: string, status: MarkStatus) => {
     const { error } = await supabase.rpc("set_card_mark", { p_card_id: cardId, p_status: status })
-    if (!error) await load()
+    if (!error) {
+      setCards((prev) =>
+        prev.map((c) => (c.id === cardId ? { ...c, own_status: status } : c))
+      )
+    }
     return { error: error?.message ?? null }
-  }
+  }, [])
 
-  const clearOwnMark = async (cardId: string) => {
+  const clearOwnMark = React.useCallback(async (cardId: string) => {
     const { error } = await supabase.rpc("clear_card_mark", { p_card_id: cardId })
-    if (!error) await load()
+    if (!error) {
+      setCards((prev) =>
+        prev.map((c) => (c.id === cardId ? { ...c, own_status: null } : c))
+      )
+    }
     return { error: error?.message ?? null }
-  }
+  }, [])
 
-  return { cards, reviewQueue, masteredCards, loading, setOwnMark, clearOwnMark, refresh: load }
+  return { cards, newCards, reviewQueue, masteredCards, loading, setOwnMark, clearOwnMark, refresh: load }
 }

@@ -16,22 +16,39 @@ interface DashboardSectionContextValue {
   section: DashboardSection
   setSection: (s: DashboardSection) => void
   cards: CardWithMarks[]
+  newCards: CardWithMarks[]
   reviewQueue: CardWithMarks[]
   masteredCards: CardWithMarks[]
   loading: boolean
   setOwnMark: (cardId: string, status: MarkStatus) => Promise<{ error: string | null }>
+  /** Shared with AppLayout, which mounts the actual DailyGoalDialog —
+   *  lets the level-picker's "change" link open the same instance. */
+  goalDialogOpen: boolean
+  setGoalDialogOpen: (open: boolean) => void
 }
 
 const DashboardSectionContext = React.createContext<DashboardSectionContextValue | null>(null)
 
 export function DashboardSectionProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
-  const { cards, reviewQueue, masteredCards, loading, setOwnMark } = useAllStudentCards(user?.id ?? null)
+  const { cards, newCards, reviewQueue, masteredCards, loading, setOwnMark } = useAllStudentCards(user?.id ?? null)
   const [section, setSection] = React.useState<DashboardSection>("decks")
+  const [goalDialogOpen, setGoalDialogOpen] = React.useState(false)
 
   const value = React.useMemo(
-    () => ({ section, setSection, cards, reviewQueue, masteredCards, loading, setOwnMark }),
-    [section, cards, reviewQueue, masteredCards, loading] // eslint-disable-line react-hooks/exhaustive-deps
+    () => ({
+      section,
+      setSection,
+      cards,
+      newCards,
+      reviewQueue,
+      masteredCards,
+      loading,
+      setOwnMark,
+      goalDialogOpen,
+      setGoalDialogOpen,
+    }),
+    [section, cards, newCards, reviewQueue, masteredCards, loading, setOwnMark, goalDialogOpen]
   )
 
   return <DashboardSectionContext.Provider value={value}>{children}</DashboardSectionContext.Provider>

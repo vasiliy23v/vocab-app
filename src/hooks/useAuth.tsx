@@ -1,7 +1,7 @@
 import * as React from "react"
 import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js"
 import { authRedirectTo } from "@/lib/appUrl"
-import { getAuthCallbackError, hasAuthCallbackInUrl } from "@/lib/authCallback"
+import { consumeAuthCallbackFromUrl } from "@/lib/authCallback"
 import { supabase } from "@/lib/supabase"
 import type { Profile } from "@/types/db"
 
@@ -11,10 +11,26 @@ interface AuthContextValue {
   profile: Profile | null
   loading: boolean
   authEvent: AuthChangeEvent | null
+  /** Callback link type: invite | recovery | magiclink | … */
+  callbackType: string | null
+  callbackError: string | null
   signUp: (email: string, password: string, displayName: string) => Promise<{ error: string | null }>
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
+  updateProfile: (
+    patch: Partial<
+      Pick<
+        Profile,
+        | "display_name"
+        | "vibrate_on_correct"
+        | "current_streak"
+        | "longest_streak"
+        | "last_study_date"
+        | "words_per_day"
+      >
+    >
+  ) => Promise<{ error: string | null }>
   requestPasswordReset: (email: string) => Promise<{ error: string | null }>
   updatePassword: (newPassword: string) => Promise<{ error: string | null }>
 }
@@ -26,6 +42,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = React.useState<Profile | null>(null)
   const [loading, setLoading] = React.useState(true)
   const [authEvent, setAuthEvent] = React.useState<AuthChangeEvent | null>(null)
+  const [callbackType, setCallbackType] = React.useState<string | null>(null)
+  const [callbackError, setCallbackError] = React.useState<string | null>(null)
 
   const fetchProfile = React.useCallback(async (user: User) => {
     const { data, error } = await supabase
@@ -37,11 +55,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) return
 
     if (data) {
-      setProfile(data as Profile)
+      const row = data as Profile
+      setProfile({ ...row, vibrate_on_correct: row.vibrate_on_correct ?? true })
       return
     }
 
-    // Профиль не создан (регистрация до миграции или сбой триггера)
     const displayName =
       (user.user_metadata?.display_name as string | undefined) ??
       user.email?.split("@")[0] ??
@@ -62,8 +80,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     let cancelled = false
-    const awaitingCallback = hasAuthCallbackInUrl()
-    const callbackError = getAuthCallbackError()
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (cancelled) return
@@ -74,39 +90,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setProfile(null)
       }
-
-      // INITIAL_SESSION fires after URL hash/code is parsed — safe to stop loading.
-      if (
-        event === "INITIAL_SESSION" ||
-        event === "SIGNED_IN" ||
-        event === "SIGNED_OUT" ||
-        event === "PASSWORD_RECOVERY"
-      ) {
-        setLoading(false)
-      }
     })
 
-    // Fallback if INITIAL_SESSION is delayed or missing (older clients / edge cases).
-    void supabase.auth.getSession().then(({ data }) => {
-      if (cancelled) return
-      if (data.session) {
-        setSession(data.session)
-        void fetchProfile(data.session.user)
+    void (async () => {
+      const consumed = await consumeAuthCallbackFromUrl()
+      if (cancelled || consumed.redirected) return
+
+      if (consumed.type) setCallbackType(consumed.type)
+      if (consumed.error) setCallbackError(consumed.error)
+
+      if (consumed.session) {
+        setSession(consumed.session)
+        void fetchProfile(consumed.session.user)
         setLoading(false)
         return
       }
-      if (!awaitingCallback || callbackError) {
-        setLoading(false)
-      }
-    })
 
-    const timeout = window.setTimeout(() => {
-      if (!cancelled) setLoading(false)
-    }, 2500)
+      const { data } = await supabase.auth.getSession()
+      if (cancelled) return
+      setSession(data.session)
+      if (data.session?.user) void fetchProfile(data.session.user)
+      setLoading(false)
+    })()
 
     return () => {
       cancelled = true
-      window.clearTimeout(timeout)
       listener.subscription.unsubscribe()
     }
   }, [fetchProfile])
@@ -125,7 +133,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    return { error: error?.message ?? null }
+    if (!error) return { error: null }
+    // GoTrue returns a generic English string; map the common code for the UI.
+    if (error.message === "Invalid login credentials" || (error as { code?: string }).code === "invalid_credentials") {
+      return { error: "invalid_credentials" }
+    }
+    return { error: error.message }
   }
 
   const signOut = async () => {
@@ -134,6 +147,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshProfile = async () => {
     if (session?.user) await fetchProfile(session.user)
+  }
+
+  const updateProfile = async (
+    patch: Partial<
+      Pick<
+        Profile,
+        | "display_name"
+        | "vibrate_on_correct"
+        | "current_streak"
+        | "longest_streak"
+        | "last_study_date"
+        | "words_per_day"
+      >
+    >
+  ) => {
+    if (!session?.user) return { error: "Not signed in" }
+    setProfile((prev) => (prev ? { ...prev, ...patch } : prev))
+    const { data, error } = await supabase
+      .from("profiles")
+      .update(patch)
+      .eq("id", session.user.id)
+      .select()
+      .maybeSingle()
+    if (error) {
+      await fetchProfile(session.user)
+      return { error: error.message }
+    }
+    if (data) setProfile({ ...(data as Profile), vibrate_on_correct: (data as Profile).vibrate_on_correct ?? true })
+    return { error: null }
   }
 
   const requestPasswordReset = async (email: string) => {
@@ -153,10 +195,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     profile,
     loading,
     authEvent,
+    callbackType,
+    callbackError,
     signUp,
     signIn,
     signOut,
     refreshProfile,
+    updateProfile,
     requestPasswordReset,
     updatePassword,
   }

@@ -1,5 +1,12 @@
 {
   "appName": "Flashcards · German",
+  "pwa": {
+    "updateAvailable": "A new version is available.",
+    "updateAction": "Update",
+    "installAvailable": "The app is available — install it for quick access.",
+    "installAction": "Install",
+    "installLink": "Install app"
+  },
   "common": {
     "loading": "Loading…",
     "back": "← Back",
@@ -44,6 +51,7 @@
     "creating": "Creating…",
     "createAccount": "Create account",
     "signupSuccess": "Done! You can sign in now.",
+    "invalidCredentials": "Wrong email or password. If you just signed up, confirm your email or reset the password.",
     "heroTagline": "Learn German vocabulary with flashcards, quizzes and a teacher who can track your progress.",
     "forgotLink": "Forgot password?",
     "forgotTitle": "Reset your password",
@@ -60,11 +68,15 @@
   "dashboard": {
     "title": "My flashcards",
     "review": "Review",
-    "reviewDesc": "Words the teacher marked \"unknown\" / \"repeat\", plus words with no teacher mark at all.",
+    "reviewDesc": "Unmarked words and words that still need practice.",
+    "newWords": "New words",
+    "newWordsDesc": "Words you haven't marked yet — learn them for the first time.",
+    "reviewWords": "Review",
+    "reviewWordsDesc": "Words marked \"unknown\" or \"repeat\" — by you or your teacher.",
     "cardsButton": "Flashcards ({{count}})",
     "quizButton": "Quiz",
     "mastered": "Mastered",
-    "masteredDesc": "Words the teacher has marked as \"known\".",
+    "masteredDesc": "Words marked as \"known\" — by you while studying or by your teacher.",
     "wordTableHeading": "Word table",
     "allDecks": "All decks",
     "decksHeading": "Decks",
@@ -73,7 +85,7 @@
     "emptyStateDesc": "Upload a list of words and start reviewing right away.",
     "reviewEmpty": "Nothing to review right now — nice work!",
     "reviewEmptyNoCards": "No words yet — add some to a deck below to start reviewing.",
-    "masteredEmpty": "No words marked as known yet.",
+    "masteredEmpty": "No mastered words yet — tap \"I know it!\" while studying.",
     "emptyDeckHint": "No words yet — add some to get started",
     "addFirstWords": "+ Add words",
     "backToDecks": "← Decks",
@@ -99,17 +111,38 @@
     "stillLearning": "↺ Still learning",
     "know": "✓ I know it!"
   },
+  "study": {
+    "exitTitle": "Leave this lesson?",
+    "exitDesc": "Progress from this lesson will not be counted — \"known\" marks are saved only when you finish every word.",
+    "exitStay": "Keep learning",
+    "exitLeave": "Leave anyway",
+    "vibrateOn": "Victory vibration is on",
+    "vibrateOff": "Vibration is off",
+    "vibrateLabel": "Vibrate on wins",
+    "donePerfect": "{{label}} · all {{total}} words on the first try!",
+    "doneWithMistakes": "{{label}} · learned all {{total}} words, had to retry {{mistakes}} along the way",
+    "streakDays_one": "{{count}} day streak",
+    "streakDays_other": "{{count}} day streak",
+    "streakNudge": "Come back tomorrow to keep your streak going!"
+  },
   "levelPicker": {
     "wordsPerLevel": "Words per level:",
     "levelLabel": "Level {{n}}",
-    "studyAll": "Study everything at once",
+    "studyAll": "Practice everything at once",
     "levelsCount_one": "{{count}} level",
-    "levelsCount_other": "{{count}} levels"
+    "levelsCount_other": "{{count}} levels",
+    "cleared": "Done",
+    "locked": "Finish level {{n}} to unlock this one"
   },
-  "groupPicker": {
-    "hint": "This set spans several topics — pick one to focus on, or study them all together.",
-    "noGroup": "(no topic)",
-    "studyAll": "Study all topics at once"
+  "dailyGoal": {
+    "title": "How many words a day?",
+    "desc": "This sets the size of each level on your learning path. You can change it any time.",
+    "customLabel": "Custom:",
+    "save": "Save",
+    "saving": "Saving…",
+    "sidebarLabel": "Daily goal",
+    "perLevel": "{{n}} words/level",
+    "change": "change"
   },
   "quiz": {
     "chooseTranslation": "Choose the translation",

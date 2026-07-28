@@ -2,48 +2,71 @@ import * as React from "react"
 import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
 import { buildQuizQuestion, checkTypedAnswer, mainWord } from "@/lib/quizEngine"
 import { cardTranslation } from "@/lib/cardTranslation"
-import type { CardWithMarks } from "@/types/db"
+import { StudyProgressBar, useProgressFlash } from "@/components/StudyProgressBar"
+import { ExitStudyDialog } from "@/components/ExitStudyDialog"
+import { useStudyVibrate } from "@/hooks/useStudyVibrate"
+import { Vibrate, VibrateOff } from "lucide-react"
+import type { CardWithMarks, MarkStatus } from "@/types/db"
 
 interface QuizSessionProps {
   cards: CardWithMarks[]
   onFinish: (result: { correct: CardWithMarks[]; wrong: CardWithMarks[] }) => void
   onExit: () => void
+  /** Persist marks only after the student finishes the whole lesson. */
+  onMark?: (cardId: string, status: MarkStatus) => void
 }
 
 function shuffle<T>(arr: T[]): T[] {
   return [...arr].sort(() => Math.random() - 0.5)
 }
 
-export function QuizSession({ cards, onFinish, onExit }: QuizSessionProps) {
+export function QuizSession({ cards, onFinish, onExit, onMark }: QuizSessionProps) {
   const { t, i18n } = useTranslation()
-  const [deck] = React.useState(() => shuffle(cards))
-  const [cur, setCur] = React.useState(0)
-  const [correct, setCorrect] = React.useState<CardWithMarks[]>([])
-  const [wrong, setWrong] = React.useState<CardWithMarks[]>([])
+  const initialTotal = cards.length
+  const [queue, setQueue] = React.useState(() => shuffle(cards))
+  const [known, setKnown] = React.useState<CardWithMarks[]>([])
+  const [missedIds, setMissedIds] = React.useState<Set<string>>(() => new Set())
   const [answered, setAnswered] = React.useState(false)
   const [chosenLabel, setChosenLabel] = React.useState<string | null>(null)
   const [typedValue, setTypedValue] = React.useState("")
   const [lastResult, setLastResult] = React.useState<boolean | null>(null)
+  const [exitOpen, setExitOpen] = React.useState(false)
+  const [finishing, setFinishing] = React.useState(false)
+  const { flash, trigger: triggerFlash } = useProgressFlash()
+  const { enabled: vibrateOn, setEnabled: setVibrateOn, buzzIfEnabled } = useStudyVibrate()
 
-  const question = React.useMemo(() => buildQuizQuestion(deck[cur], deck, cur), [deck, cur])
-  const total = deck.length
+  const current = queue[0]
+  const question = React.useMemo(
+    () => (current ? buildQuizQuestion(current, [...known, ...queue], 0) : null),
+    [current, known, queue]
+  )
+
+  const progressPct = initialTotal > 0 ? Math.round((known.length / initialTotal) * 100) : 0
+  const learningCount = queue.filter((c) => missedIds.has(c.id)).length
+  const dirty = known.length > 0 || missedIds.size > 0 || answered
 
   React.useEffect(() => {
-    if (cur >= total) {
-      onFinish({ correct, wrong })
-    }
-  }, [cur, total, correct, wrong, onFinish])
+    if (finishing || queue.length > 0 || known.length === 0) return
+    setFinishing(true)
+    for (const c of known) onMark?.(c.id, "known")
+    const wrong = known.filter((c) => missedIds.has(c.id))
+    onFinish({ correct: known, wrong })
+  }, [queue.length, known, missedIds, onFinish, onMark, finishing])
 
-  if (cur >= total) return null
+  if (!current || !question || finishing) return null
 
   const registerAnswer = (ok: boolean) => {
     setLastResult(ok)
-    if (ok) setCorrect((c) => [...c, question.card])
-    else setWrong((w) => [...w, question.card])
+    if (ok) {
+      triggerFlash("success")
+      buzzIfEnabled()
+    } else {
+      triggerFlash("destructive")
+      setMissedIds((prev) => new Set(prev).add(current.id))
+    }
   }
 
   const pickOption = (label: string, isCorrect: boolean) => {
@@ -61,11 +84,16 @@ export function QuizSession({ cards, onFinish, onExit }: QuizSessionProps) {
   }
 
   const next = () => {
+    if (lastResult) {
+      setKnown((k) => [...k, current])
+      setQueue((q) => q.slice(1))
+    } else {
+      setQueue((q) => [...q.slice(1), current])
+    }
     setAnswered(false)
     setChosenLabel(null)
     setTypedValue("")
     setLastResult(null)
-    setCur((c) => c + 1)
   }
 
   const typeLabel =
@@ -77,20 +105,31 @@ export function QuizSession({ cards, onFinish, onExit }: QuizSessionProps) {
 
   return (
     <div className="mx-auto max-w-md space-y-4">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={onExit}>
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="sm" onClick={() => (dirty ? setExitOpen(true) : onExit())}>
           {t("common.back")}
         </Button>
-        <Progress value={Math.round((cur / total) * 100)} className="flex-1" />
+        <StudyProgressBar value={progressPct} flash={flash} />
         <span className="text-xs text-muted-foreground whitespace-nowrap">
-          {cur + 1} / {total}
+          {known.length} / {initialTotal}
         </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0"
+          title={vibrateOn ? t("study.vibrateOn") : t("study.vibrateOff")}
+          aria-label={vibrateOn ? t("study.vibrateOn") : t("study.vibrateOff")}
+          onClick={() => void setVibrateOn(!vibrateOn)}
+        >
+          {vibrateOn ? <Vibrate className="h-4 w-4" /> : <VibrateOff className="h-4 w-4 text-muted-foreground" />}
+        </Button>
       </div>
 
       <div className="grid grid-cols-3 gap-2">
-        <StatBox label={t("stats.correct")} value={correct.length} tone="success" />
-        <StatBox label={t("stats.remaining")} value={total - cur} />
-        <StatBox label={t("stats.errors")} value={wrong.length} tone="destructive" />
+        <StatBox label={t("stats.correct")} value={known.length} tone="success" />
+        <StatBox label={t("stats.remaining")} value={queue.length} />
+        <StatBox label={t("stats.errors")} value={learningCount} tone="destructive" />
       </div>
 
       <div className="flex min-h-[140px] flex-col items-center justify-center rounded-xl border p-7 text-center">
@@ -160,6 +199,8 @@ export function QuizSession({ cards, onFinish, onExit }: QuizSessionProps) {
           {t("quiz.next")}
         </Button>
       )}
+
+      <ExitStudyDialog open={exitOpen} onOpenChange={setExitOpen} onConfirm={onExit} />
     </div>
   )
 }

@@ -104,3 +104,67 @@
     opacity: 0;
   }
 }
+
+/* Study progress bar — brief bright flash on know / still-learning */
+@keyframes study-progress-glow-success {
+  0% {
+    box-shadow: 0 0 0 0 hsl(var(--success) / 0.55);
+    filter: brightness(1);
+  }
+  35% {
+    box-shadow: 0 0 14px 3px hsl(var(--success) / 0.7);
+    filter: brightness(1.35);
+  }
+  100% {
+    box-shadow: 0 0 0 0 hsl(var(--success) / 0);
+    filter: brightness(1);
+  }
+}
+@keyframes study-progress-glow-fail {
+  0% {
+    box-shadow: 0 0 0 0 hsl(var(--destructive) / 0.5);
+    filter: brightness(1);
+  }
+  35% {
+    box-shadow: 0 0 14px 3px hsl(var(--destructive) / 0.75);
+    filter: brightness(1.3);
+  }
+  100% {
+    box-shadow: 0 0 0 0 hsl(var(--destructive) / 0);
+    filter: brightness(1);
+  }
+}
+.study-progress-track-success {
+  animation: study-progress-glow-success 520ms ease-out;
+}
+.study-progress-track-fail {
+  animation: study-progress-glow-fail 520ms ease-out;
+}
+.study-progress-fill-success,
+.study-progress-fill-fail {
+  transition: width 300ms ease-out, background-color 120ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .study-progress-track-success,
+  .study-progress-track-fail {
+    animation: none;
+  }
+}
+
+/* Install-app toast icon — a small, restrained bounce, not a spin/flash */
+@keyframes pwa-install-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+.pwa-install-icon {
+  animation: pwa-install-bounce 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pwa-install-icon {
+    animation: none;
+  }
+}

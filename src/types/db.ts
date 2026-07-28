@@ -7,6 +7,16 @@ export interface Profile {
   display_name: string | null
   created_at: string
   role: UserRole
+  /** Buzz on each correct / "I know it!" answer during study. */
+  vibrate_on_correct: boolean
+  /** Consecutive days with at least one finished study session. */
+  current_streak: number
+  longest_streak: number
+  /** Local-date (YYYY-MM-DD) of the last finished session; drives streak math. */
+  last_study_date: string | null
+  /** Fixed level size for the leveled learning path — null until the
+   *  student picks one (asked once, then remembered). */
+  words_per_day: number | null
 }
 
 export interface TeacherLink {

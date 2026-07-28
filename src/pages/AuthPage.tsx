@@ -41,7 +41,8 @@ export default function AuthPage() {
     const fd = new FormData(e.currentTarget)
     const { error } = await signIn(fd.get("email") as string, fd.get("password") as string)
     setLoading(false)
-    if (error) toast.error(error)
+    if (error === "invalid_credentials") toast.error(t("auth.invalidCredentials"))
+    else if (error) toast.error(error)
   }
 
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {

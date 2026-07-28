@@ -39,6 +39,11 @@ create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null,
   display_name text,
+  vibrate_on_correct boolean not null default true,
+  current_streak integer not null default 0,
+  longest_streak integer not null default 0,
+  last_study_date date,
+  words_per_day integer,
   created_at timestamptz not null default now()
 );
 
@@ -279,6 +284,32 @@ create policy "profiles_update_own"
 create policy "profiles_insert_own"
   on public.profiles for insert
   with check (id = auth.uid());
+
+-- profiles_update_own above only restricts which ROW a user can touch, not
+-- which COLUMNS — without this, role would be updatable by anyone editing
+-- their own row directly, bypassing the admin_set_role RPC's superadmin
+-- check entirely.
+create function public.profiles_guard_role()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  if new.role is distinct from old.role then
+    if not exists (
+      select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'
+    ) then
+      new.role := old.role;
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger profiles_guard_role_trigger
+  before update on public.profiles
+  for each row
+  execute function public.profiles_guard_role();
 
 create policy "teacher_links_select"
   on public.teacher_links for select
