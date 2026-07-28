@@ -15,14 +15,27 @@ function isStandalone(): boolean {
   )
 }
 
+/** iPhone/iPad Safari (and any browser wrapping it, since iOS forces
+ *  WebKit) never fires beforeinstallprompt — there is no programmatic
+ *  install API at all. iPadOS 13+ reports as a desktop Mac UA, so we also
+ *  check for a Mac with touch support. */
+function detectIos(): boolean {
+  if (typeof navigator === "undefined") return false
+  const ua = navigator.userAgent
+  return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+}
+
 /** Wraps the browser's native "Add to Home Screen" prompt. `canInstall` is
  *  only ever true on browsers that support `beforeinstallprompt` (Chrome/
- *  Edge/Android) and haven't already installed the app — iOS Safari has
- *  no such API, so it just never offers this. */
+ *  Edge/Android) and haven't already installed the app. `isIos` flags the
+ *  one major platform with no such API at all — Safari requires the
+ *  student to do it manually via the Share sheet, so UI for that platform
+ *  needs to show instructions instead of calling `promptInstall`. */
 export function usePwaInstall() {
   const deferredPrompt = React.useRef<BeforeInstallPromptEvent | null>(null)
   const [canInstall, setCanInstall] = React.useState(false)
   const [installed, setInstalled] = React.useState(isStandalone)
+  const [isIos] = React.useState(detectIos)
 
   React.useEffect(() => {
     const onBeforeInstallPrompt = (e: Event) => {
@@ -54,5 +67,10 @@ export function usePwaInstall() {
     return choice
   }, [])
 
-  return { canInstall: canInstall && !installed, installed, promptInstall }
+  return {
+    canInstall: canInstall && !installed,
+    installed,
+    isIos: isIos && !installed,
+    promptInstall,
+  }
 }

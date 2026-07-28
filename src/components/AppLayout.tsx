@@ -8,6 +8,7 @@ import { useStudyStreak } from "@/hooks/useStudyStreak"
 import { useDailyGoal } from "@/hooks/useDailyGoal"
 import { usePwaInstall } from "@/hooks/usePwaInstall"
 import { DailyGoalDialog } from "@/components/DailyGoalDialog"
+import { IosInstallDialog } from "@/components/IosInstallDialog"
 import { formatCount } from "@/lib/formatCount"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -41,23 +42,35 @@ function StreakBadge({ streak, compact }: { streak: number; compact?: boolean })
 
 /** Durable way back to the install prompt after the one-time toast
  *  (PwaInstallPrompt) — only renders while the browser can actually offer
- *  it (unsupported browsers / already-installed just get nothing here). */
+ *  it (unsupported browsers / already-installed just get nothing here).
+ *  On iOS there's no programmatic prompt at all, so it opens the manual
+ *  Share-sheet instructions instead of calling promptInstall. */
 function InstallAppLink({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation()
-  const { canInstall, promptInstall } = usePwaInstall()
-  if (!canInstall) return null
+  const { canInstall, isIos, promptInstall } = usePwaInstall()
+  const [iosDialogOpen, setIosDialogOpen] = React.useState(false)
+
+  if (!canInstall && !isIos) return null
+
   return (
-    <button
-      type="button"
-      onClick={() => {
-        void promptInstall()
-        onNavigate?.()
-      }}
-      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-    >
-      <Download className="h-4 w-4 shrink-0" />
-      <span className="truncate">{t("pwa.installLink")}</span>
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          if (isIos) {
+            setIosDialogOpen(true)
+          } else {
+            void promptInstall()
+            onNavigate?.()
+          }
+        }}
+        className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      >
+        <Download className="h-4 w-4 shrink-0" />
+        <span className="truncate">{t("pwa.installLink")}</span>
+      </button>
+      {isIos && <IosInstallDialog open={iosDialogOpen} onOpenChange={setIosDialogOpen} />}
+    </>
   )
 }
 

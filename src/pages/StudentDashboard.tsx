@@ -195,10 +195,10 @@ export default function StudentDashboard() {
                     <p className="text-sm text-muted-foreground">{t("dashboard.newWordsDesc")}</p>
                   </div>
                   <div className="flex gap-2">
-                    <Button onClick={() => goToStudySetup("cards", newCards, t("dashboard.newWords"))}>
+                    <Button onClick={() => goToStudySetup("cards", cards, t("dashboard.newWords"))}>
                       {t("dashboard.cardsButton", { count: formatCount(newCards.length) })}
                     </Button>
-                    <Button variant="outline" onClick={() => goToStudySetup("quiz", newCards, t("dashboard.newWords"))}>
+                    <Button variant="outline" onClick={() => goToStudySetup("quiz", cards, t("dashboard.newWords"))}>
                       {t("dashboard.quizButton")}
                     </Button>
                   </div>

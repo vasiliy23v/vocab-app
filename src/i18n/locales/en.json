@@ -4,8 +4,12 @@
     "updateAvailable": "A new version is available.",
     "updateAction": "Update",
     "installAvailable": "The app is available — install it for quick access.",
+    "installAvailableIos": "Tip: add this app to your Home Screen — tap Share, then \"Add to Home Screen\".",
     "installAction": "Install",
-    "installLink": "Install app"
+    "installLink": "Install app",
+    "iosTitle": "Add to Home Screen",
+    "iosStep1": "Tap Share in Safari's toolbar.",
+    "iosStep2": "Choose \"Add to Home Screen\"."
   },
   "common": {
     "loading": "Loading…",

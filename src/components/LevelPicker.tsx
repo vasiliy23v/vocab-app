@@ -51,6 +51,11 @@ export function LevelPicker<T>({
     [levels, cleared, isLevelComplete]
   )
   const currentIndex = unlocked.findIndex((u, i) => u && !cleared[i])
+  const currentRef = React.useRef<HTMLButtonElement>(null)
+
+  React.useEffect(() => {
+    currentRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
+  }, [currentIndex])
 
   return (
     <div className="space-y-5">
@@ -95,6 +100,7 @@ export function LevelPicker<T>({
           return (
             <button
               key={i}
+              ref={isCurrent ? currentRef : undefined}
               onClick={() => isUnlocked && onSelectLevel(lvl, i)}
               disabled={!isUnlocked}
               title={!isUnlocked ? t("levelPicker.locked", { n: i }) : undefined}
