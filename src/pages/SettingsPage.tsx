@@ -10,6 +10,7 @@ import { IosInstallDialog } from "@/components/IosInstallDialog"
 import type { Language } from "@/types/db"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
+import { Separator } from "@/components/ui/separator"
 import { Download } from "lucide-react"
 
 export default function SettingsPage() {
@@ -43,51 +44,59 @@ export default function SettingsPage() {
   const vibrateOn = profile?.vibrate_on_correct ?? true
 
   return (
-    <div className="space-y-4">
+    <div className="max-w-2xl space-y-6">
       {/* UI Language Section */}
-      <div className="rounded-lg border p-4">
-        <h3 className="mb-3 font-semibold">{t("language.label")}</h3>
-        <p className="mb-3 text-sm text-muted-foreground">{t("settings.languageDesc")}</p>
+      <div className="space-y-3">
+        <div>
+          <h3 className="font-semibold">{t("language.label")}</h3>
+          <p className="text-sm text-muted-foreground">{t("settings.languageDesc")}</p>
+        </div>
         <LanguageSwitcher />
       </div>
 
+      <Separator />
+
       {/* Learning Language Pair Section */}
       {languageFromTemp && languageToTemp && (
-        <div className="rounded-lg border p-4">
-          <h3 className="mb-4 font-semibold">{t("languagePair.title")}</h3>
-          <LanguagePairSelector
-            from={languageFromTemp}
-            to={languageToTemp}
-            onFromChange={setLanguageFromTemp}
-            onToChange={setLanguageToTemp}
-            onSave={handleSaveLanguagePair}
-            isSaving={isSavingLanguagePair}
-          />
-        </div>
+        <>
+          <div className="space-y-3">
+            <h3 className="font-semibold">{t("languagePair.title")}</h3>
+            <LanguagePairSelector
+              from={languageFromTemp}
+              to={languageToTemp}
+              onFromChange={setLanguageFromTemp}
+              onToChange={setLanguageToTemp}
+              onSave={handleSaveLanguagePair}
+              isSaving={isSavingLanguagePair}
+            />
+          </div>
+          <Separator />
+        </>
       )}
 
       {/* Daily Goal Section */}
       <button
         type="button"
         onClick={() => setGoalDialogOpen(true)}
-        className="flex w-full items-center justify-between gap-2 rounded-lg border p-4 text-left transition-colors hover:bg-muted/40"
+        className="w-full text-left transition-colors hover:opacity-70"
       >
-        <div>
-          <div className="text-sm font-medium">{t("dailyGoal.sidebarLabel")}</div>
-          <div className="text-xs text-muted-foreground">
-            {t("dailyGoal.desc")}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="font-semibold">{t("dailyGoal.sidebarLabel")}</div>
+            <p className="text-sm text-muted-foreground">{t("dailyGoal.desc")}</p>
           </div>
-        </div>
-        <div className="text-sm font-semibold">
-          {wordsPerDay !== null ? t("dailyGoal.perLevel", { n: wordsPerDay }) : t("dailyGoal.change")}
+          <div className="text-right text-sm font-semibold">
+            {wordsPerDay !== null ? t("dailyGoal.perLevel", { n: wordsPerDay }) : t("dailyGoal.change")}
+          </div>
         </div>
       </button>
 
+      <Separator />
+
       {/* Vibration Section */}
-      <div className="flex items-center justify-between rounded-lg border p-4">
+      <div className="flex items-center justify-between">
         <div>
-          <div className="text-sm font-medium">{t("study.vibrateLabel")}</div>
-          <div className="text-xs text-muted-foreground">{t("study.vibrateLabel")}</div>
+          <div className="font-semibold">{t("study.vibrateLabel")}</div>
         </div>
         <Switch
           checked={vibrateOn}
@@ -97,31 +106,34 @@ export default function SettingsPage() {
         />
       </div>
 
-      {/* Install App Section */}
       {(canInstall || isIos) && (
-        <div className="rounded-lg border p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <Download className="h-4 w-4" />
-            <div>
-              <div className="font-semibold">{t("pwa.settingsTitle")}</div>
-              <p className="text-sm text-muted-foreground">{t("pwa.settingsDesc")}</p>
+        <>
+          <Separator />
+          {/* Install App Section */}
+          <div className="space-y-3">
+            <div className="flex items-start gap-3">
+              <Download className="h-5 w-5 shrink-0 text-muted-foreground" />
+              <div className="flex-1">
+                <div className="font-semibold">{t("pwa.settingsTitle")}</div>
+                <p className="text-sm text-muted-foreground">{t("pwa.settingsDesc")}</p>
+              </div>
             </div>
+            <Button
+              type="button"
+              className="w-full"
+              onClick={() => {
+                if (isIos) {
+                  setIosDialogOpen(true)
+                } else {
+                  void promptInstall()
+                }
+              }}
+            >
+              {t("pwa.installLink")}
+            </Button>
+            {isIos && <IosInstallDialog open={iosDialogOpen} onOpenChange={setIosDialogOpen} />}
           </div>
-          <Button
-            type="button"
-            className="w-full"
-            onClick={() => {
-              if (isIos) {
-                setIosDialogOpen(true)
-              } else {
-                void promptInstall()
-              }
-            }}
-          >
-            {t("pwa.installLink")}
-          </Button>
-          {isIos && <IosInstallDialog open={iosDialogOpen} onOpenChange={setIosDialogOpen} />}
-        </div>
+        </>
       )}
     </div>
   )
