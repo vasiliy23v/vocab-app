@@ -16,10 +16,12 @@ import TeacherStudentPage from "@/pages/TeacherStudentPage"
 import AdminDashboard from "@/pages/AdminDashboard"
 import ResetPasswordPage from "@/pages/ResetPasswordPage"
 import { LanguageOnboardingDialog } from "@/components/LanguageOnboardingDialog"
+import { UILanguageOnboardingDialog } from "@/components/UILanguageOnboardingDialog"
 import { Toaster } from "@/components/ui/sonner"
 import { PwaUpdatePrompt } from "@/components/PwaUpdatePrompt"
 import { PwaInstallPrompt } from "@/components/PwaInstallPrompt"
 import type { Language } from "@/types/db"
+import { LANGUAGE_STORAGE_KEY } from "@/i18n"
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -74,8 +76,33 @@ function AuthCallbackHandler() {
   return null
 }
 
-/** Show language onboarding dialog if user hasn't set a language pair yet */
-function LanguageOnboardingHandler() {
+/** Show UI language onboarding dialog if user hasn't set language yet */
+function UILanguageOnboardingHandler() {
+  const [showDialog, setShowDialog] = React.useState(false)
+  const handled = React.useRef(false)
+
+  React.useEffect(() => {
+    if (handled.current) return
+
+    if (typeof window !== "undefined") {
+      const storedLang = window.localStorage.getItem(LANGUAGE_STORAGE_KEY)
+      if (!storedLang) {
+        handled.current = true
+        setShowDialog(true)
+      }
+    }
+  }, [])
+
+  return (
+    <UILanguageOnboardingDialog
+      open={showDialog}
+      onComplete={() => setShowDialog(false)}
+    />
+  )
+}
+
+/** Show language pair onboarding dialog if user hasn't set a language pair yet */
+function LanguagePairOnboardingHandler() {
   const { profile, loading, updateProfile } = useAuth()
   const [showDialog, setShowDialog] = React.useState(false)
   const handled = React.useRef(false)
@@ -105,7 +132,8 @@ function AppRoutes() {
   return (
     <>
       <AuthCallbackHandler />
-      <LanguageOnboardingHandler />
+      <UILanguageOnboardingHandler />
+      <LanguagePairOnboardingHandler />
       <Routes>
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/invite/:code" element={<InvitePage />} />
