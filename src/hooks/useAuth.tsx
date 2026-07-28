@@ -3,6 +3,7 @@ import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js"
 import { authRedirectTo } from "@/lib/appUrl"
 import { consumeAuthCallbackFromUrl } from "@/lib/authCallback"
 import { supabase } from "@/lib/supabase"
+import { STARTER_DECK_NAME, STARTER_DECK_NAME_EN, STARTER_DECK_CARDS } from "@/lib/starterDeck"
 import type { Profile } from "@/types/db"
 
 interface AuthContextValue {
@@ -36,6 +37,32 @@ interface AuthContextValue {
 }
 
 const AuthContext = React.createContext<AuthContextValue | undefined>(undefined)
+
+/** One-time welcome deck for a brand-new profile — just something to
+ *  click through, not a curriculum. Best-effort: a brand-new account
+ *  with no decks yet is still fully usable, so failures here are only
+ *  logged, never surfaced to the student. */
+async function seedStarterDeck(userId: string) {
+  const { data: deck, error: deckError } = await supabase
+    .from("decks")
+    .insert({ name: STARTER_DECK_NAME, name_en: STARTER_DECK_NAME_EN, owner_id: userId, created_by: userId })
+    .select()
+    .maybeSingle()
+  if (deckError || !deck) {
+    console.error("Failed to seed starter deck", deckError)
+    return
+  }
+
+  const payload = STARTER_DECK_CARDS.map((r, i) => ({
+    deck_id: deck.id,
+    owner_id: userId,
+    created_by: userId,
+    sort_order: i,
+    ...r,
+  }))
+  const { error: cardsError } = await supabase.from("cards").insert(payload)
+  if (cardsError) console.error("Failed to seed starter deck cards", cardsError)
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = React.useState<Session | null>(null)
@@ -75,7 +102,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .select()
       .maybeSingle()
 
-    if (!insertError && created) setProfile(created as Profile)
+    if (!insertError && created) {
+      setProfile(created as Profile)
+      void seedStarterDeck(user.id)
+    }
   }, [])
 
   React.useEffect(() => {

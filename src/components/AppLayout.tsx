@@ -24,15 +24,12 @@ function initials(name: string | null | undefined, email: string | undefined) {
   return base.slice(0, 2).toUpperCase()
 }
 
-function StreakBadge({ streak, compact }: { streak: number; compact?: boolean }) {
+function StreakBadge({ streak }: { streak: number }) {
   const { t } = useTranslation()
   return (
     <span
       title={t("study.streakDays", { count: streak })}
-      className={cn(
-        "flex shrink-0 items-center gap-1 rounded-full border border-orange-200 bg-orange-50 font-medium text-orange-700 dark:border-orange-900 dark:bg-orange-950 dark:text-orange-300",
-        compact ? "px-1.5 py-0.5 text-[11px]" : "px-2 py-0.5 text-xs"
-      )}
+      className="flex shrink-0 items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-700 dark:border-orange-900 dark:bg-orange-950 dark:text-orange-300"
     >
       <span aria-hidden>🔥</span>
       {streak}
@@ -44,8 +41,10 @@ function StreakBadge({ streak, compact }: { streak: number; compact?: boolean })
  *  (PwaInstallPrompt) — only renders while the browser can actually offer
  *  it (unsupported browsers / already-installed just get nothing here).
  *  On iOS there's no programmatic prompt at all, so it opens the manual
- *  Share-sheet instructions instead of calling promptInstall. */
-function InstallAppLink({ onNavigate }: { onNavigate?: () => void }) {
+ *  Share-sheet instructions instead of calling promptInstall.
+ *  Styled as a settings card (not a plain nav row) with a short blurb —
+ *  a bare "Install app" link with no context was easy to miss/ignore. */
+function InstallAppSetting({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation()
   const { canInstall, isIos, promptInstall } = usePwaInstall()
   const [iosDialogOpen, setIosDialogOpen] = React.useState(false)
@@ -53,9 +52,17 @@ function InstallAppLink({ onNavigate }: { onNavigate?: () => void }) {
   if (!canInstall && !isIos) return null
 
   return (
-    <>
-      <button
+    <div className="space-y-1.5 rounded-lg border px-2.5 py-2">
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Download className="h-3.5 w-3.5 shrink-0" />
+        {t("pwa.settingsTitle")}
+      </div>
+      <p className="text-[11px] leading-snug text-muted-foreground">{t("pwa.settingsDesc")}</p>
+      <Button
         type="button"
+        size="sm"
+        variant="outline"
+        className="w-full"
         onClick={() => {
           if (isIos) {
             setIosDialogOpen(true)
@@ -64,13 +71,11 @@ function InstallAppLink({ onNavigate }: { onNavigate?: () => void }) {
             onNavigate?.()
           }
         }}
-        className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
       >
-        <Download className="h-4 w-4 shrink-0" />
-        <span className="truncate">{t("pwa.installLink")}</span>
-      </button>
+        {t("pwa.installLink")}
+      </Button>
       {isIos && <IosInstallDialog open={iosDialogOpen} onOpenChange={setIosDialogOpen} />}
-    </>
+    </div>
   )
 }
 
@@ -208,7 +213,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       <NavLinks onNavigate={() => setMobileOpen(false)} />
-      <InstallAppLink onNavigate={() => setMobileOpen(false)} />
 
       <div className="mt-auto space-y-3 pt-4">
         <LanguageSwitcher />
@@ -233,6 +237,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {wordsPerDay !== null ? t("dailyGoal.perLevel", { n: wordsPerDay }) : t("dailyGoal.change")}
           </span>
         </button>
+
+        <InstallAppSetting onNavigate={() => setMobileOpen(false)} />
 
         <div className="flex items-center gap-2 rounded-lg border p-2">
           <Avatar className="h-8 w-8 shrink-0">
@@ -283,7 +289,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </SheetContent>
           </Sheet>
           <span className="font-semibold text-sm">{t("appName")}</span>
-          <div className="flex w-9 justify-end">{streak > 0 && <StreakBadge streak={streak} compact />}</div>
+          <div className="w-9" />
         </header>
 
         <main className="container flex-1 py-6 md:px-8">{children}</main>

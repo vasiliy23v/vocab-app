@@ -7,6 +7,8 @@
     "installAvailableIos": "Tip: add this app to your Home Screen — tap Share, then \"Add to Home Screen\".",
     "installAction": "Install",
     "installLink": "Install app",
+    "settingsTitle": "Install as an app",
+    "settingsDesc": "Adds it to your home screen for one-tap access, full-screen with no browser bar.",
     "iosTitle": "Add to Home Screen",
     "iosStep1": "Tap Share in Safari's toolbar.",
     "iosStep2": "Choose \"Add to Home Screen\"."
