@@ -8,16 +8,13 @@ import { useStudyStreak } from "@/hooks/useStudyStreak"
 import { useDailyGoal } from "@/hooks/useDailyGoal"
 import { usePwaInstall } from "@/hooks/usePwaInstall"
 import { DailyGoalDialog } from "@/components/DailyGoalDialog"
-import { IosInstallDialog } from "@/components/IosInstallDialog"
 import { formatCount } from "@/lib/formatCount"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
-import { BookOpen, Users, ShieldCheck, LogOut, Menu, Download, Settings } from "lucide-react"
+import { BookOpen, Users, ShieldCheck, LogOut, Menu, Settings } from "lucide-react"
 
 function initials(name: string | null | undefined, email: string | undefined) {
   const base = name || email || "?"
@@ -88,6 +85,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const items = [
     { to: "/", label: t("dashboard.title"), icon: BookOpen, onClick: () => setSection("decks") },
     { to: "/people", label: t("nav.people"), icon: Users },
+    { to: "/settings", label: t("nav.settings"), icon: Settings },
     ...(isSuperadmin ? [{ to: "/admin", label: t("nav.admin"), icon: ShieldCheck }] : []),
   ]
 
@@ -215,43 +213,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <NavLinks onNavigate={() => setMobileOpen(false)} />
 
       <div className="mt-auto space-y-3 pt-4">
-        <LanguageSwitcher />
-
-        <button
-          type="button"
-          onClick={() => {
-            navigate("/settings")
-            onNavigate?.()
-          }}
-          className="flex w-full items-center gap-2.5 rounded-lg border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <Settings className="h-4 w-4 shrink-0" />
-          <span>{t("nav.settings")}</span>
-        </button>
-
-        <label className="flex cursor-pointer items-center justify-between gap-2 rounded-lg border px-2.5 py-2">
-          <span className="text-xs text-muted-foreground">{t("study.vibrateLabel")}</span>
-          <Switch
-            checked={vibrateOn}
-            onCheckedChange={(checked) => {
-              void updateProfile({ vibrate_on_correct: checked })
-            }}
-          />
-        </label>
-
-        <button
-          type="button"
-          onClick={() => setGoalDialogOpen(true)}
-          className="flex w-full items-center justify-between gap-2 rounded-lg border px-2.5 py-2 text-left hover:bg-muted/40"
-        >
-          <span className="text-xs text-muted-foreground">{t("dailyGoal.sidebarLabel")}</span>
-          <span className="text-xs font-medium">
-            {wordsPerDay !== null ? t("dailyGoal.perLevel", { n: wordsPerDay }) : t("dailyGoal.change")}
-          </span>
-        </button>
-
-        <InstallAppSetting onNavigate={() => setMobileOpen(false)} />
-
         <div className="flex items-center gap-2 rounded-lg border p-2">
           <Avatar className="h-8 w-8 shrink-0">
             <AvatarFallback className="text-xs">{initials(profile?.display_name, user?.email)}</AvatarFallback>
