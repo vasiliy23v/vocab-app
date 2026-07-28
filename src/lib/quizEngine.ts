@@ -1,4 +1,5 @@
-import type { CardWithMarks } from "@/types/db"
+import type { CardWithMarks, Language } from "@/types/db"
+import { getCardBack } from "@/lib/cardTranslation"
 
 export type QuizType = "multi" | "spelling" | "typein"
 
@@ -11,6 +12,7 @@ export interface QuizQuestion {
   type: QuizType
   card: CardWithMarks
   options?: QuizOption[]
+  languageTo?: Language
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -66,18 +68,22 @@ function makeTypos(word: string, n: number): string[] {
   return [...new Set(res)]
 }
 
-function makeMultiChoice(card: CardWithMarks, pool: CardWithMarks[]): QuizQuestion {
+function makeMultiChoice(card: CardWithMarks, pool: CardWithMarks[], languageTo: Language = "de"): QuizQuestion {
   const wrong = shuffle(pool.filter((c) => c.id !== card.id)).slice(0, 3)
   const options: QuizOption[] = shuffle(
-    [card, ...wrong].map((c) => ({ label: mainWord(c.word_de), isCorrect: c.id === card.id }))
+    [card, ...wrong].map((c) => ({
+      label: mainWord(getCardBack(c, languageTo)),
+      isCorrect: c.id === card.id,
+    }))
   )
-  return { type: "multi", card, options }
+  return { type: "multi", card, options, languageTo }
 }
 
-function makeSpelling(card: CardWithMarks, pool: CardWithMarks[]): QuizQuestion {
-  const correct = mainWord(card.word_de)
-  const otherWords = shuffle(pool.filter((c) => c.id !== card.id)).map((c) => mainWord(c.word_de))
-  const typos = makeTypos(card.word_de, 8)
+function makeSpelling(card: CardWithMarks, pool: CardWithMarks[], languageTo: Language = "de"): QuizQuestion {
+  const correctWord = getCardBack(card, languageTo)
+  const correct = mainWord(correctWord)
+  const otherWords = shuffle(pool.filter((c) => c.id !== card.id)).map((c) => mainWord(getCardBack(c, languageTo)))
+  const typos = makeTypos(correctWord, 8)
   const selected: string[] = []
   const seen = new Set([correct])
   for (const w of [...typos, ...otherWords]) {
@@ -91,18 +97,19 @@ function makeSpelling(card: CardWithMarks, pool: CardWithMarks[]): QuizQuestion 
   const options: QuizOption[] = shuffle(
     [correct, ...selected].map((label) => ({ label, isCorrect: label === correct }))
   )
-  return { type: "spelling", card, options }
+  return { type: "spelling", card, options, languageTo }
 }
 
-export function buildQuizQuestion(card: CardWithMarks, pool: CardWithMarks[], index: number): QuizQuestion {
-  if (pool.length < 4) return { type: "typein", card }
+export function buildQuizQuestion(card: CardWithMarks, pool: CardWithMarks[], index: number, languageTo: Language = "de"): QuizQuestion {
+  if (pool.length < 4) return { type: "typein", card, languageTo }
   const t = index % 3
-  if (t === 0) return makeMultiChoice(card, pool)
-  if (t === 1) return makeSpelling(card, pool)
-  return { type: "typein", card }
+  if (t === 0) return makeMultiChoice(card, pool, languageTo)
+  if (t === 1) return makeSpelling(card, pool, languageTo)
+  return { type: "typein", card, languageTo }
 }
 
-export function checkTypedAnswer(value: string, card: CardWithMarks): boolean {
-  const accepted = acceptedForms(card.word_de)
+export function checkTypedAnswer(value: string, card: CardWithMarks, languageTo: Language = "de"): boolean {
+  const correctWord = getCardBack(card, languageTo)
+  const accepted = acceptedForms(correctWord)
   return accepted.some((f) => normalize(value) === normalize(f))
 }

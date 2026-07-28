@@ -1,10 +1,11 @@
 import * as React from "react"
 import { useTranslation } from "react-i18next"
+import { useAuth } from "@/hooks/useAuth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { buildQuizQuestion, checkTypedAnswer, mainWord } from "@/lib/quizEngine"
-import { cardTranslation } from "@/lib/cardTranslation"
+import { cardTranslation, getCardBack } from "@/lib/cardTranslation"
 import { StudyProgressBar, useProgressFlash } from "@/components/StudyProgressBar"
 import { ExitStudyDialog } from "@/components/ExitStudyDialog"
 import { useStudyVibrate } from "@/hooks/useStudyVibrate"
@@ -25,6 +26,9 @@ function shuffle<T>(arr: T[]): T[] {
 
 export function QuizSession({ cards, onFinish, onExit, onMark }: QuizSessionProps) {
   const { t, i18n } = useTranslation()
+  const { profile } = useAuth()
+  const languageTo = profile?.language_to || "de"
+
   const initialTotal = cards.length
   const [queue, setQueue] = React.useState(() => shuffle(cards))
   const [known, setKnown] = React.useState<CardWithMarks[]>([])
@@ -40,8 +44,8 @@ export function QuizSession({ cards, onFinish, onExit, onMark }: QuizSessionProp
 
   const current = queue[0]
   const question = React.useMemo(
-    () => (current ? buildQuizQuestion(current, [...known, ...queue], 0) : null),
-    [current, known, queue]
+    () => (current ? buildQuizQuestion(current, [...known, ...queue], 0, languageTo) : null),
+    [current, known, queue, languageTo]
   )
 
   const progressPct = initialTotal > 0 ? Math.round((known.length / initialTotal) * 100) : 0
@@ -78,7 +82,7 @@ export function QuizSession({ cards, onFinish, onExit, onMark }: QuizSessionProp
 
   const submitTyped = () => {
     if (answered || !typedValue.trim()) return
-    const ok = checkTypedAnswer(typedValue, question.card)
+    const ok = checkTypedAnswer(typedValue, question.card, languageTo)
     setAnswered(true)
     registerAnswer(ok)
   }
@@ -190,7 +194,7 @@ export function QuizSession({ cards, onFinish, onExit, onMark }: QuizSessionProp
 
       {answered && (
         <div className={cn("text-center text-sm", lastResult ? "text-success" : "text-destructive")}>
-          {lastResult ? t("quiz.correct") : t("quiz.correctAnswerIs", { word: mainWord(question.card.word_de) })}
+          {lastResult ? t("quiz.correct") : t("quiz.correctAnswerIs", { word: mainWord(getCardBack(question.card, languageTo)) })}
         </div>
       )}
 

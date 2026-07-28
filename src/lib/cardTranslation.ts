@@ -7,6 +7,7 @@
 export interface Translatable {
   translation_ru: string
   translation_en?: string | null
+  word_de?: string
 }
 
 export function cardTranslation(card: Translatable, language: string): string {
@@ -14,6 +15,40 @@ export function cardTranslation(card: Translatable, language: string): string {
     return card.translation_en?.trim() ? card.translation_en : card.translation_ru
   }
   return card.translation_ru
+}
+
+/**
+ * Get the front side text based on learning language pair
+ * Front shows the "from" language (what user reads)
+ */
+export function getCardFront(card: Translatable, languageFrom: string): string {
+  if (languageFrom === "ru") {
+    return card.translation_ru
+  }
+  if (languageFrom === "en") {
+    return card.translation_en?.trim() ? card.translation_en : card.translation_ru
+  }
+  if (languageFrom === "de") {
+    return card.word_de || ""
+  }
+  return card.translation_ru
+}
+
+/**
+ * Get the back side text based on learning language pair
+ * Back shows the "to" language (what user learns)
+ */
+export function getCardBack(card: Translatable, languageTo: string): string {
+  if (languageTo === "de") {
+    return card.word_de || ""
+  }
+  if (languageTo === "ru") {
+    return card.translation_ru
+  }
+  if (languageTo === "en") {
+    return card.translation_en?.trim() ? card.translation_en : card.translation_ru
+  }
+  return card.word_de || ""
 }
 
 /**
@@ -42,11 +77,25 @@ export function cardGroupName(card: GroupTranslatable, language: string): string
 export interface ExampleTranslatable {
   example_ru: string
   example_en?: string | null
+  example_de?: string
 }
 
 export function cardExample(card: ExampleTranslatable, language: string): string {
   if (language.startsWith("en")) {
     return card.example_en?.trim() ? card.example_en : card.example_ru
+  }
+  return card.example_ru
+}
+
+/**
+ * Get the appropriate example based on learning language
+ */
+export function getCardExample(card: ExampleTranslatable, languageTo: string): string {
+  if (languageTo === "de") {
+    return card.example_de?.trim() || card.example_ru
+  }
+  if (languageTo === "en") {
+    return card.example_en?.trim() || card.example_ru
   }
   return card.example_ru
 }
