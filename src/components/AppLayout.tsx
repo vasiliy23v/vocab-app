@@ -148,10 +148,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { streak } = useStudyStreak()
   const { wordsPerDay } = useDailyGoal()
   const { goalDialogOpen, setGoalDialogOpen } = useDashboardSection()
-  // wordsPerDay reads as null both "not chosen yet" and "profile still
-  // loading" — without the loading check this flashes open on every
-  // mount before the profile fetch resolves.
-  const goalDialogVisible = (!authLoading && wordsPerDay === null) || goalDialogOpen
+  // Only show daily goal dialog if user explicitly opened it from settings
+  const goalDialogVisible = goalDialogOpen
 
   const handleSignOut = async () => {
     await signOut()
@@ -227,7 +225,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       <DailyGoalDialog
         open={goalDialogVisible}
-        onOpenChange={wordsPerDay === null ? undefined : setGoalDialogOpen}
+        onOpenChange={setGoalDialogOpen}
       />
     </div>
   )
