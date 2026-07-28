@@ -17,7 +17,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
-import { BookOpen, Users, ShieldCheck, LogOut, Menu, Download } from "lucide-react"
+import { BookOpen, Users, ShieldCheck, LogOut, Menu, Download, Settings } from "lucide-react"
 
 function initials(name: string | null | undefined, email: string | undefined) {
   const base = name || email || "?"
@@ -216,6 +216,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       <div className="mt-auto space-y-3 pt-4">
         <LanguageSwitcher />
+
+        <button
+          type="button"
+          onClick={() => navigate("/settings")}
+          className="flex w-full items-center gap-2.5 rounded-lg border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <Settings className="h-4 w-4 shrink-0" />
+          <span>{t("nav.settings")}</span>
+        </button>
 
         <label className="flex cursor-pointer items-center justify-between gap-2 rounded-lg border px-2.5 py-2">
           <span className="text-xs text-muted-foreground">{t("study.vibrateLabel")}</span>

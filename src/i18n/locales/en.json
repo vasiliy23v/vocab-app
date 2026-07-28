@@ -45,7 +45,8 @@
     "people": "Teachers & students",
     "signOut": "Sign out",
     "admin": "Admin dashboard",
-    "menu": "Menu"
+    "menu": "Menu",
+    "settings": "Settings"
   },
   "auth": {
     "subtitle": "Sign in or create an account",
@@ -252,7 +253,16 @@
   "language": {
     "label": "Language",
     "ru": "Русский",
-    "en": "English"
+    "en": "English",
+    "de": "Deutsch"
+  },
+  "languagePair": {
+    "title": "Learning language pair",
+    "subtitle": "Choose which language you're learning from and to",
+    "from": "From",
+    "to": "To",
+    "save": "Save",
+    "saving": "Saving…"
   },
   "resetPassword": {
     "title": "Set a new password",

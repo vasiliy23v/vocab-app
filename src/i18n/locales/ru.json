@@ -45,7 +45,8 @@
     "people": "Учителя и ученики",
     "signOut": "Выйти",
     "admin": "Админ-панель",
-    "menu": "Меню"
+    "menu": "Меню",
+    "settings": "Настройки"
   },
   "auth": {
     "subtitle": "Войдите или создайте аккаунт",
@@ -256,7 +257,16 @@
   "language": {
     "label": "Язык",
     "ru": "Русский",
-    "en": "English"
+    "en": "English",
+    "de": "Deutsch"
+  },
+  "languagePair": {
+    "title": "Пара языков",
+    "subtitle": "Выберите, с какого на какой язык вы учите",
+    "from": "С",
+    "to": "На",
+    "save": "Сохранить",
+    "saving": "Сохраняем…"
   },
   "resetPassword": {
     "title": "Новый пароль",

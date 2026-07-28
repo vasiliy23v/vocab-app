@@ -1,5 +1,6 @@
 export type MarkStatus = "known" | "unknown" | "repeat"
 export type UserRole = "user" | "superadmin"
+export type Language = "ru" | "en" | "de"
 
 export interface Profile {
   id: string
@@ -17,6 +18,10 @@ export interface Profile {
   /** Fixed level size for the leveled learning path — null until the
    *  student picks one (asked once, then remembered). */
   words_per_day: number | null
+  /** Language to learn from (e.g. "en" to learn German from English) */
+  language_from: Language
+  /** Language to learn (e.g. "de" for German) */
+  language_to: Language
 }
 
 export interface TeacherLink {

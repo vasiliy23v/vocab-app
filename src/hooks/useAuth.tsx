@@ -29,6 +29,8 @@ interface AuthContextValue {
         | "longest_streak"
         | "last_study_date"
         | "words_per_day"
+        | "language_from"
+        | "language_to"
       >
     >
   ) => Promise<{ error: string | null }>
@@ -189,6 +191,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         | "longest_streak"
         | "last_study_date"
         | "words_per_day"
+        | "language_from"
+        | "language_to"
       >
     >
   ) => {

@@ -11,12 +11,15 @@ import AuthPage from "@/pages/AuthPage"
 import InvitePage from "@/pages/InvitePage"
 import PeoplePage from "@/pages/PeoplePage"
 import HomePage from "@/pages/HomePage"
+import SettingsPage from "@/pages/SettingsPage"
 import TeacherStudentPage from "@/pages/TeacherStudentPage"
 import AdminDashboard from "@/pages/AdminDashboard"
 import ResetPasswordPage from "@/pages/ResetPasswordPage"
+import { LanguageOnboardingDialog } from "@/components/LanguageOnboardingDialog"
 import { Toaster } from "@/components/ui/sonner"
 import { PwaUpdatePrompt } from "@/components/PwaUpdatePrompt"
 import { PwaInstallPrompt } from "@/components/PwaInstallPrompt"
+import type { Language } from "@/types/db"
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -71,10 +74,38 @@ function AuthCallbackHandler() {
   return null
 }
 
+/** Show language onboarding dialog if user hasn't set a language pair yet */
+function LanguageOnboardingHandler() {
+  const { profile, loading, updateProfile } = useAuth()
+  const [showDialog, setShowDialog] = React.useState(false)
+  const handled = React.useRef(false)
+
+  React.useEffect(() => {
+    if (loading || handled.current) return
+
+    // Show dialog if user is logged in but hasn't selected a language pair
+    if (profile && !profile.language_from && !profile.language_to) {
+      handled.current = true
+      setShowDialog(true)
+    }
+  }, [profile, loading])
+
+  const handleComplete = async (from: Language, to: Language) => {
+    await updateProfile({
+      language_from: from,
+      language_to: to,
+    })
+    setShowDialog(false)
+  }
+
+  return <LanguageOnboardingDialog open={showDialog} onComplete={handleComplete} />
+}
+
 function AppRoutes() {
   return (
     <>
       <AuthCallbackHandler />
+      <LanguageOnboardingHandler />
       <Routes>
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/invite/:code" element={<InvitePage />} />
@@ -92,6 +123,14 @@ function AppRoutes() {
           element={
             <RequireAuth>
               <PeoplePage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <RequireAuth>
+              <SettingsPage />
             </RequireAuth>
           }
         />
