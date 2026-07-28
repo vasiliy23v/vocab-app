@@ -34,48 +34,6 @@ function StreakBadge({ streak }: { streak: number }) {
   )
 }
 
-/** Durable way back to the install prompt after the one-time toast
- *  (PwaInstallPrompt) — only renders while the browser can actually offer
- *  it (unsupported browsers / already-installed just get nothing here).
- *  On iOS there's no programmatic prompt at all, so it opens the manual
- *  Share-sheet instructions instead of calling promptInstall.
- *  Styled as a settings card (not a plain nav row) with a short blurb —
- *  a bare "Install app" link with no context was easy to miss/ignore. */
-function InstallAppSetting({ onNavigate }: { onNavigate?: () => void }) {
-  const { t } = useTranslation()
-  const { canInstall, isIos, promptInstall } = usePwaInstall()
-  const [iosDialogOpen, setIosDialogOpen] = React.useState(false)
-
-  if (!canInstall && !isIos) return null
-
-  return (
-    <div className="space-y-1.5 rounded-lg border px-2.5 py-2">
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Download className="h-3.5 w-3.5 shrink-0" />
-        {t("pwa.settingsTitle")}
-      </div>
-      <p className="text-[11px] leading-snug text-muted-foreground">{t("pwa.settingsDesc")}</p>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        className="w-full"
-        onClick={() => {
-          if (isIos) {
-            setIosDialogOpen(true)
-          } else {
-            void promptInstall()
-            onNavigate?.()
-          }
-        }}
-      >
-        {t("pwa.installLink")}
-      </Button>
-      {isIos && <IosInstallDialog open={iosDialogOpen} onOpenChange={setIosDialogOpen} />}
-    </div>
-  )
-}
-
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation()
   const location = useLocation()
@@ -187,7 +145,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation()
   const [mobileOpen, setMobileOpen] = React.useState(false)
   const isSuperadmin = useIsSuperadmin()
-  const vibrateOn = profile?.vibrate_on_correct ?? true
   const { streak } = useStudyStreak()
   const { wordsPerDay } = useDailyGoal()
   const { goalDialogOpen, setGoalDialogOpen } = useDashboardSection()
