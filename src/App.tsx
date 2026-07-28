@@ -108,12 +108,17 @@ function LanguagePairOnboardingHandler() {
   const handled = React.useRef(false)
 
   React.useEffect(() => {
-    if (loading || handled.current) return
+    // Wait for profile to load
+    if (loading) return
+    if (handled.current) return
 
-    // Show dialog if user is logged in but hasn't selected a language pair
-    if (profile && !profile.language_from && !profile.language_to) {
+    // Show dialog if user is logged in but hasn't selected a language pair (null values)
+    if (profile && (profile.language_from === null || profile.language_to === null)) {
       handled.current = true
       setShowDialog(true)
+    } else if (profile && profile.language_from && profile.language_to) {
+      // Profile is loaded with values - no need to show dialog
+      handled.current = true
     }
   }, [profile, loading])
 

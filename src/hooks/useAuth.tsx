@@ -100,6 +100,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         id: user.id,
         email: user.email ?? "",
         display_name: displayName,
+        language_from: "en",
+        language_to: "de",
       })
       .select()
       .maybeSingle()
