@@ -31,6 +31,7 @@ interface AuthContextValue {
         | "words_per_day"
         | "language_from"
         | "language_to"
+        | "show_on_leaderboard"
       >
     >
   ) => Promise<{ error: string | null }>
@@ -195,6 +196,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         | "words_per_day"
         | "language_from"
         | "language_to"
+        | "show_on_leaderboard"
       >
     >
   ) => {

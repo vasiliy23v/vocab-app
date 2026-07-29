@@ -169,7 +169,7 @@ export function parseMultilingualVocab(raw: string): MultilingualParseResult {
     if (!word) continue
 
     const card: MultilingualCardRow = {
-      word: { de: word } as any,
+      word: { de: word },
       translations: {},
       examples: { de: "" },
       descriptions: { de: "" },

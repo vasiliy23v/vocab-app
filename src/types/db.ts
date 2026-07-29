@@ -22,6 +22,8 @@ export interface Profile {
   language_from: Language
   /** Language to learn (e.g. "de" for German) */
   language_to: Language
+  /** Whether the student's flame count is visible on the public leaderboard. */
+  show_on_leaderboard: boolean
 }
 
 export interface TeacherLink {
@@ -178,12 +180,16 @@ export interface WordDescription {
   created_at: string
 }
 
-// Extended parsed card row for multilingual imports
+// Extended parsed card row for multilingual imports. Keyed by whatever
+// language suffix the uploaded header used (e.g. "uk" or "ua"), so these
+// are plain string-keyed maps rather than Record<Language, ...> — not
+// every detected key is guaranteed to be a known Language code, and not
+// every Language is guaranteed to be present.
 export interface MultilingualCardRow {
-  word: Record<Language, string> // {"de": "das Haus", "ru": "дом", "en": "house", "uk": "дім"}
-  translations: Record<Language, string> // Language→Language translations
-  examples: Record<Language, string> // Examples in different languages
-  descriptions: Record<Language, string> // Descriptions in different languages
-  group: Record<Language, string> // Group names in different languages
+  word: Record<string, string> // {"de": "das Haus", "ru": "дом", "en": "house", "uk": "дім"}
+  translations: Record<string, string> // Language→Language translations
+  examples: Record<string, string> // Examples in different languages
+  descriptions: Record<string, string> // Descriptions in different languages
+  group: Record<string, string> // Group names in different languages
   tags: string[]
 }
