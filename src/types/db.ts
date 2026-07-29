@@ -1,6 +1,6 @@
 export type MarkStatus = "known" | "unknown" | "repeat"
 export type UserRole = "user" | "superadmin"
-export type Language = "ru" | "en" | "de"
+export type Language = "ru" | "en" | "de" | "uk" | "fr" | "es" | "it" | "pt" | "pl" | "ja" | "zh" | "ko"
 
 export interface Profile {
   id: string
@@ -125,4 +125,54 @@ export interface ParsedCardRow {
   example_de: string
   example_ru: string
   example_en: string
+}
+
+// Multilingual system types
+export interface LanguageInfo {
+  code: Language
+  name: string
+  native_name: string
+  direction: "ltr" | "rtl"
+  created_at: string
+}
+
+export interface LanguagePair {
+  id: string
+  language_from: Language
+  language_to: Language
+  created_at: string
+}
+
+export interface WordTranslation {
+  id: string
+  card_id: string
+  language: Language
+  text: string
+  created_at: string
+}
+
+export interface WordExample {
+  id: string
+  card_id: string
+  language: Language
+  text: string
+  created_at: string
+}
+
+export interface WordDescription {
+  id: string
+  card_id: string
+  language: Language
+  text: string
+  created_at: string
+}
+
+// Extended parsed card row for multilingual imports
+export interface MultilingualCardRow {
+  word: Record<Language, string> // {"de": "das Haus", "ru": "дом", "en": "house", "uk": "дім"}
+  translations: Record<Language, string> // Language→Language translations
+  examples: Record<Language, string> // Examples in different languages
+  descriptions: Record<Language, string> // Descriptions in different languages
+  group: Record<Language, string> // Group names in different languages
+  tags: string[]
 }

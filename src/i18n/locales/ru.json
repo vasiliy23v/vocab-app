@@ -18,6 +18,7 @@
     "back": "← Назад",
     "cancel": "Отмена",
     "delete": "Удалить",
+    "create": "Создать",
     "save": "Сохранить",
     "email": "Email",
     "password": "Пароль",
@@ -258,7 +259,8 @@
     "label": "Язык",
     "ru": "Русский",
     "en": "English",
-    "de": "Deutsch"
+    "de": "Deutsch",
+    "uk": "Українська 🇺🇦"
   },
   "languagePair": {
     "title": "Пара языков",
@@ -324,6 +326,19 @@
     "export": "Экспорт в Excel",
     "exporting": "Экспортируем…",
     "exportError": "Не удалось экспортировать",
-    "noAccess": "У вас нет доступа к этой странице."
+    "noAccess": "У вас нет доступа к этой странице.",
+    "tabVocabulary": "Словарь",
+    "selectStudent": "Выберите ученика",
+    "chooseStudent": "Выберите ученика…",
+    "selectDeck": "Выберите набор",
+    "chooseDeck": "Выберите набор…",
+    "newDeck": "+ Новый набор",
+    "createNewDeck": "Создать новый набор",
+    "createDeckDesc": "Создать пустой набор для ученика, а затем добавить в него слова.",
+    "deckCreated": "Набор создан",
+    "addCards": "Добавить слова",
+    "cardsAdded": "Добавлено слов: {{count}}",
+    "noDecksByStudent": "Пока нет наборов у этого ученика",
+    "cards": "слов"
   }
 }

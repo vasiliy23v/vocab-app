@@ -3,8 +3,9 @@ import { initReactI18next } from "react-i18next"
 import ru from "@/i18n/locales/ru.json"
 import en from "@/i18n/locales/en.json"
 import de from "@/i18n/locales/de.json"
+import uk from "@/i18n/locales/uk.json"
 
-export const SUPPORTED_LANGUAGES = ["ru", "en", "de"] as const
+export const SUPPORTED_LANGUAGES = ["uk", "ru", "en", "de"] as const
 export type AppLanguage = (typeof SUPPORTED_LANGUAGES)[number]
 
 export const LANGUAGE_STORAGE_KEY = "vocab-app-language"
@@ -25,6 +26,7 @@ i18n.use(initReactI18next).init({
     ru: { translation: ru },
     en: { translation: en },
     de: { translation: de },
+    uk: { translation: uk },
   },
   lng: detectInitialLanguage(),
   fallbackLng: "ru",

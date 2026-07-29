@@ -18,6 +18,7 @@
     "back": "← Zurück",
     "cancel": "Abbrechen",
     "delete": "Löschen",
+    "create": "Erstellen",
     "save": "Speichern",
     "email": "E-Mail",
     "password": "Passwort",
@@ -254,7 +255,8 @@
     "label": "Sprache",
     "ru": "Русский",
     "en": "English",
-    "de": "Deutsch"
+    "de": "Deutsch",
+    "uk": "Українська 🇺🇦"
   },
   "languagePair": {
     "title": "Sprachenpaar",
@@ -320,6 +322,19 @@
     "export": "Nach Excel exportieren",
     "exporting": "Wird exportiert...",
     "exportError": "Export fehlgeschlagen",
-    "noAccess": "Sie haben keinen Zugriff auf diese Seite."
+    "noAccess": "Sie haben keinen Zugriff auf diese Seite.",
+    "tabVocabulary": "Vokabeln",
+    "selectStudent": "Wählen Sie einen Schüler",
+    "chooseStudent": "Wählen Sie einen Schüler...",
+    "selectDeck": "Wählen Sie ein Deck",
+    "chooseDeck": "Wählen Sie ein Deck...",
+    "newDeck": "+ Neues Deck",
+    "createNewDeck": "Neues Deck erstellen",
+    "createDeckDesc": "Erstellen Sie ein leeres Deck für einen Schüler und fügen Sie dann Wörter hinzu.",
+    "deckCreated": "Deck erstellt",
+    "addCards": "Wörter hinzufügen",
+    "cardsAdded": "Wörter hinzugefügt: {{count}}",
+    "noDecksByStudent": "Dieser Schüler hat noch keine Decks",
+    "cards": "Wörter"
   }
 }

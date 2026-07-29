@@ -25,7 +25,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
           )}
           aria-pressed={i18n.language.startsWith(lng)}
         >
-          {lng}
+          {t(`language.${lng}`)}
         </button>
       ))}
     </div>

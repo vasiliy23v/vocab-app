@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { useAuth } from "@/hooks/useAuth"
 import { useAdminUsers, useAdminTemplates } from "@/hooks/useAdmin"
+import { useAdminUserDecks } from "@/hooks/useAdminUserDecks"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -41,15 +42,19 @@ export default function AdminDashboard() {
       </div>
 
       <Tabs defaultValue="users">
-        <TabsList className="grid w-full grid-cols-2 max-w-xs">
+        <TabsList className="grid w-full grid-cols-3 max-w-sm">
           <TabsTrigger value="users">{t("admin.tabUsers")}</TabsTrigger>
           <TabsTrigger value="content">{t("admin.tabContent")}</TabsTrigger>
+          <TabsTrigger value="vocabulary">{t("admin.tabVocabulary")}</TabsTrigger>
         </TabsList>
         <TabsContent value="users" className="pt-4">
           <UsersPanel />
         </TabsContent>
         <TabsContent value="content" className="pt-4">
           <ContentPanel />
+        </TabsContent>
+        <TabsContent value="vocabulary" className="pt-4">
+          <VocabularyPanel />
         </TabsContent>
       </Tabs>
     </div>
@@ -421,5 +426,163 @@ function TemplateCard({
         </AlertDialog>
       </CardContent>
     </Card>
+  )
+}
+
+function VocabularyPanel() {
+  const { t } = useTranslation()
+  const { users } = useAdminUsers()
+  const [selectedUserId, setSelectedUserId] = React.useState<string>("")
+  const { decks, loading, createDeck, addCards } = useAdminUserDecks(selectedUserId || null)
+  const [selectedDeckId, setSelectedDeckId] = React.useState<string>("")
+  const [newDeckName, setNewDeckName] = React.useState("")
+  const [newDeckNameEn, setNewDeckNameEn] = React.useState("")
+  const [showCreateDeck, setShowCreateDeck] = React.useState(false)
+  const [busy, setBusy] = React.useState(false)
+
+  React.useEffect(() => {
+    if (decks.length > 0 && !selectedDeckId) {
+      setSelectedDeckId(decks[0].id)
+    }
+  }, [decks, selectedDeckId])
+
+  const handleCreateDeck = async () => {
+    if (!newDeckName.trim() || !selectedUserId) return
+    setBusy(true)
+    const { error, deckId } = await createDeck(newDeckName.trim(), newDeckNameEn.trim())
+    setBusy(false)
+    if (error) {
+      toast.error(error)
+    } else {
+      toast.success(t("admin.deckCreated"))
+      setNewDeckName("")
+      setNewDeckNameEn("")
+      setShowCreateDeck(false)
+      if (deckId) setSelectedDeckId(deckId)
+    }
+  }
+
+  const handleUploadCards = async (
+    rows: any[],
+    _newDeckName?: string,
+    onProgress?: (done: number, total: number) => void
+  ) => {
+    if (!selectedDeckId) {
+      toast.error(t("admin.selectDeck"))
+      return { error: t("admin.selectDeck") }
+    }
+    const { error, insertedCount } = await addCards(selectedDeckId, rows, onProgress)
+    if (error) {
+      toast.error(error)
+      return { error }
+    }
+    toast.success(t("admin.cardsAdded", { count: insertedCount }))
+    return { error: null }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        {/* User Selection */}
+        <div className="space-y-2">
+          <Label htmlFor="user-select">{t("admin.selectStudent")}</Label>
+          <select
+            id="user-select"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            value={selectedUserId}
+            onChange={(e) => {
+              setSelectedUserId(e.target.value)
+              setSelectedDeckId("")
+            }}
+          >
+            <option value="">{t("admin.chooseStudent")}</option>
+            {users
+              .filter((u) => u.role === "user")
+              .map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.display_name || u.email}
+                </option>
+              ))}
+          </select>
+        </div>
+
+        {/* Deck Selection */}
+        {selectedUserId && (
+          <div className="space-y-2">
+            <Label htmlFor="deck-select">{t("admin.selectDeck")}</Label>
+            <select
+              id="deck-select"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={selectedDeckId}
+              onChange={(e) => setSelectedDeckId(e.target.value)}
+              disabled={loading || decks.length === 0}
+            >
+              <option value="">{t("admin.chooseDeck")}</option>
+              {decks.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name} ({d.card_count} {t("admin.cards")})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+
+      {selectedUserId && (
+        <div className="flex gap-2">
+          <Dialog open={showCreateDeck} onOpenChange={setShowCreateDeck}>
+            <DialogTrigger asChild>
+              <Button variant="outline">{t("admin.newDeck")}</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{t("admin.createNewDeck")}</DialogTitle>
+                <DialogDescription>{t("admin.createDeckDesc")}</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="new-deck-name">{t("upload.deckNameLabel")}</Label>
+                  <Input
+                    id="new-deck-name"
+                    value={newDeckName}
+                    onChange={(e) => setNewDeckName(e.target.value)}
+                    placeholder={t("upload.deckNamePlaceholder")}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="new-deck-name-en">{t("upload.deckNameEnLabel")}</Label>
+                  <Input
+                    id="new-deck-name-en"
+                    value={newDeckNameEn}
+                    onChange={(e) => setNewDeckNameEn(e.target.value)}
+                    placeholder={t("upload.deckNameEnPlaceholder")}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={handleCreateDeck} disabled={busy || !newDeckName.trim()}>
+                  {t("common.create")}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {selectedDeckId && (
+            <UploadDialog onUpload={handleUploadCards} trigger={<Button>{t("admin.addCards")}</Button>} />
+          )}
+        </div>
+      )}
+
+      {loading && (
+        <div className="space-y-2">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      )}
+
+      {selectedUserId && decks.length === 0 && (
+        <p className="text-sm text-muted-foreground">{t("admin.noDecksByStudent")}</p>
+      )}
+    </div>
   )
 }

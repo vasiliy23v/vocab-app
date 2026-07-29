@@ -18,6 +18,7 @@
     "back": "← Back",
     "cancel": "Cancel",
     "delete": "Delete",
+    "create": "Create",
     "save": "Save",
     "email": "Email",
     "password": "Password",
@@ -254,7 +255,8 @@
     "label": "Language",
     "ru": "Русский",
     "en": "English",
-    "de": "Deutsch"
+    "de": "Deutsch",
+    "uk": "Українська 🇺🇦"
   },
   "languagePair": {
     "title": "Learning language pair",
@@ -320,6 +322,19 @@
     "export": "Export to Excel",
     "exporting": "Exporting…",
     "exportError": "Export failed",
-    "noAccess": "You don't have access to this page."
+    "noAccess": "You don't have access to this page.",
+    "tabVocabulary": "Vocabulary",
+    "selectStudent": "Select a student",
+    "chooseStudent": "Choose a student…",
+    "selectDeck": "Select a deck",
+    "chooseDeck": "Choose a deck…",
+    "newDeck": "+ New deck",
+    "createNewDeck": "Create a new deck",
+    "createDeckDesc": "Create an empty deck for a student, then add words to it.",
+    "deckCreated": "Deck created",
+    "addCards": "Add words",
+    "cardsAdded": "Words added: {{count}}",
+    "noDecksByStudent": "This student has no decks yet",
+    "cards": "words"
   }
 }
