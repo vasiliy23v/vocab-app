@@ -38,6 +38,8 @@ export function LanguageOnboardingDialog({ open, onComplete }: LanguageOnboardin
         return t("language.en")
       case "de":
         return t("language.de")
+      case "uk":
+        return t("language.uk")
       default:
         return code
     }

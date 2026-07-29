@@ -32,7 +32,7 @@ export function useDecks(studentId: string | null) {
   React.useEffect(() => {
     if (!studentId) return
     const channel = supabase
-      .channel(`decks_${studentId}_${crypto.randomUUID()}`)
+      .channel(`decks_${studentId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "decks", filter: `owner_id=eq.${studentId}` },
@@ -95,7 +95,7 @@ export function useCards(deckId: string | null) {
   React.useEffect(() => {
     if (!deckId) return
     const channel = supabase
-      .channel(`cards_${deckId}_${crypto.randomUUID()}`)
+      .channel(`cards_${deckId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "cards", filter: `deck_id=eq.${deckId}` },
@@ -103,7 +103,7 @@ export function useCards(deckId: string | null) {
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "card_marks" },
+        { event: "UPDATE", schema: "public", table: "card_marks" },
         () => load()
       )
       .subscribe()
@@ -157,14 +157,24 @@ export function useCards(deckId: string | null) {
   }
 
   const setMark = async (cardId: string, status: MarkStatus) => {
+    setCards((prev) =>
+      prev.map((c) => (c.id === cardId ? { ...c, own_status: status } : c))
+    )
     const { error } = await supabase.rpc("set_card_mark", { p_card_id: cardId, p_status: status })
-    if (!error) await load()
+    if (error) {
+      await load()
+    }
     return { error: error?.message ?? null }
   }
 
   const clearMark = async (cardId: string) => {
+    setCards((prev) =>
+      prev.map((c) => (c.id === cardId ? { ...c, own_status: null } : c))
+    )
     const { error } = await supabase.rpc("clear_card_mark", { p_card_id: cardId })
-    if (!error) await load()
+    if (error) {
+      await load()
+    }
     return { error: error?.message ?? null }
   }
 
@@ -207,9 +217,9 @@ export function useAllStudentCards(studentId: string | null) {
   React.useEffect(() => {
     if (!studentId) return
     const channel = supabase
-      .channel(`all_cards_${studentId}_${crypto.randomUUID()}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "cards" }, () => load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "card_marks" }, () => load())
+      .channel(`all_cards_${studentId}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "cards" }, () => load())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "card_marks" }, () => load())
       .subscribe()
     return () => {
       supabase.removeChannel(channel)

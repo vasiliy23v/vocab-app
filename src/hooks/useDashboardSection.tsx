@@ -1,6 +1,7 @@
 import * as React from "react"
+import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/hooks/useAuth"
-import { useAllStudentCards } from "@/hooks/useCards"
+import { useDashboardData, useDerivedCardSets } from "@/hooks/useDashboardData"
 import type { CardWithMarks, MarkStatus } from "@/types/db"
 
 /**
@@ -31,9 +32,23 @@ const DashboardSectionContext = React.createContext<DashboardSectionContextValue
 
 export function DashboardSectionProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
-  const { cards, newCards, reviewQueue, masteredCards, loading, setOwnMark } = useAllStudentCards(user?.id ?? null)
+  const { cards, loading } = useDashboardData(user?.id ?? null)
+  const { newCards, reviewQueue, masteredCards } = useDerivedCardSets(cards)
   const [section, setSection] = React.useState<DashboardSection>("decks")
   const [goalDialogOpen, setGoalDialogOpen] = React.useState(false)
+
+  const setOwnMark = React.useCallback(
+    async (cardId: string, status: MarkStatus) => {
+      // Optimistic update
+      // No need to actually update the global cards array here - let realtime do it
+      const { error } = await supabase.rpc("set_card_mark", {
+        p_card_id: cardId,
+        p_status: status,
+      })
+      return { error: error?.message ?? null }
+    },
+    []
+  )
 
   const value = React.useMemo(
     () => ({

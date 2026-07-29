@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
-import { BookOpen, Users, ShieldCheck, LogOut, Menu, Settings } from "lucide-react"
+import { BookOpen, Users, ShieldCheck, LogOut, Menu, Settings, Flame } from "lucide-react"
 
 function initials(name: string | null | undefined, email: string | undefined) {
   const base = name || email || "?"
@@ -43,6 +43,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const items = [
     { to: "/", label: t("dashboard.title"), icon: BookOpen, onClick: () => setSection("decks") },
     { to: "/people", label: t("nav.people"), icon: Users },
+    { to: "/leaderboard", label: t("leaderboard.title"), icon: Flame },
     { to: "/settings", label: t("nav.settings"), icon: Settings },
     ...(isSuperadmin ? [{ to: "/admin", label: t("nav.admin"), icon: ShieldCheck }] : []),
   ]

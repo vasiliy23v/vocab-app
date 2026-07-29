@@ -267,7 +267,25 @@
     "saving": "Wird gespeichert..."
   },
   "settings": {
-    "languageDesc": "Wählen Sie die Sprache für die App-Oberfläche"
+    "languageDesc": "Wählen Sie die Sprache für die App-Oberfläche",
+    "profile": "Profil",
+    "namePlaceholder": "Dein Name",
+    "nameSaved": "Name gespeichert!",
+    "nameSaveError": "Name konnte nicht gespeichert werden",
+    "dangerZone": "Gefahrenzone",
+    "resetDesc": "Alle Ihre Fortschritte und gelernten Wörter permanent löschen",
+    "resetProgress": "Alle Fortschritte zurücksetzen",
+    "confirmReset": "Zurücksetzen bestätigen?",
+    "resetWarning": "Dies löscht ALLE deine Fortschritte, gelernten Wörter und Markierungen dauerhaft. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "progressReset": "Fortschritt zurückgesetzt!",
+    "resetError": "Fortschritt konnte nicht zurückgesetzt werden",
+    "changesSaved": "Änderungen gespeichert!",
+    "saveError": "Änderungen konnten nicht gespeichert werden",
+    "showOnLeaderboard": "Zeige mich auf der Bestenliste",
+    "unsavedChanges": "Ungespeicherte Änderungen",
+    "unsavedDesc": "Möchtest du deine Änderungen speichern?",
+    "discard": "Verwerfen",
+    "saveChanges": "Änderungen speichern"
   },
   "resetPassword": {
     "title": "Neues Passwort festlegen",
@@ -280,6 +298,27 @@
     "save": "Passwort speichern",
     "success": "Passwort aktualisiert!",
     "backToSignIn": "← Zurück zur Anmeldung"
+  },
+  "leaderboard": {
+    "title": "Bestenliste",
+    "subtitle": "Top-Performer die Deutsch lernen",
+    "desc": "Zeige deinen Namen in der Bestenliste an und konkurriere mit anderen. Verdiene 🔥 Flammen für jedes gelernte Wort!",
+    "info": "Dein Fortschritt ist für andere Benutzer sichtbar. Du kannst dies in den Einstellungen jederzeit ändern.",
+    "earnFlames": "Flammen verdienen:",
+    "flame1": "+1 Flamme für jedes Wort, das du als \"bekannt\" markierst",
+    "flame2": "Flammen verfolgen deine Gesamtzahl beherrschter Wörter",
+    "joinNow": "Bestenliste beitreten",
+    "topPlayers": "Top-Spieler",
+    "empty": "Noch niemand in der Bestenliste",
+    "emptyHint": "Sei der Erste, der beitritt, und verdiene Flammen!",
+    "you": "Du",
+    "yourRank": "Dein Rang:",
+    "flames": "Flammen",
+    "howItWorks": "So funktioniert es:",
+    "info1": "Verdiene 1 Flamme für jedes gelernte Wort",
+    "info2": "Erscheint nur in der Bestenliste, wenn du zugestimmt hast",
+    "info3": "Aktualisiert sich in Echtzeit während du lernst",
+    "info4": "Du kannst dich jederzeit in den Einstellungen abmelden"
   },
   "admin": {
     "title": "Admin-Dashboard",

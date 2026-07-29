@@ -34,11 +34,13 @@ export function LanguagePairSelector({
   const getLanguageName = (code: Language) => {
     switch (code) {
       case "ru":
-        return "Русский"
+        return t("language.ru")
       case "en":
-        return "English"
+        return t("language.en")
       case "de":
-        return "Deutsch"
+        return t("language.de")
+      case "uk":
+        return t("language.uk")
       default:
         return code
     }

@@ -15,8 +15,10 @@ import SettingsPage from "@/pages/SettingsPage"
 import TeacherStudentPage from "@/pages/TeacherStudentPage"
 import AdminDashboard from "@/pages/AdminDashboard"
 import ResetPasswordPage from "@/pages/ResetPasswordPage"
+import LeaderboardPage from "@/pages/LeaderboardPage"
 import { LanguageOnboardingDialog } from "@/components/LanguageOnboardingDialog"
 import { UILanguageOnboardingDialog } from "@/components/UILanguageOnboardingDialog"
+import { LeaderboardOptInDialog } from "@/components/LeaderboardOptInDialog"
 import { Toaster } from "@/components/ui/sonner"
 import { PwaUpdatePrompt } from "@/components/PwaUpdatePrompt"
 import { PwaInstallPrompt } from "@/components/PwaInstallPrompt"
@@ -139,6 +141,7 @@ function AppRoutes() {
       <AuthCallbackHandler />
       <UILanguageOnboardingHandler />
       <LanguagePairOnboardingHandler />
+      <LeaderboardOptInDialog />
       <Routes>
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/invite/:code" element={<InvitePage />} />
@@ -182,6 +185,14 @@ function AppRoutes() {
               <RequireAdmin>
                 <AdminDashboard />
               </RequireAdmin>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/leaderboard"
+          element={
+            <RequireAuth>
+              <LeaderboardPage />
             </RequireAuth>
           }
         />

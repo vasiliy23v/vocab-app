@@ -267,7 +267,25 @@
     "saving": "Saving…"
   },
   "settings": {
-    "languageDesc": "Choose the language for the app interface"
+    "languageDesc": "Choose the language for the app interface",
+    "profile": "Profile",
+    "namePlaceholder": "Your name",
+    "nameSaved": "Name saved!",
+    "nameSaveError": "Failed to save name",
+    "dangerZone": "Danger Zone",
+    "resetDesc": "Permanently delete all your progress and studied words",
+    "resetProgress": "Reset All Progress",
+    "confirmReset": "Confirm Reset?",
+    "resetWarning": "This will permanently delete ALL your progress, learned words, and marks. This action cannot be undone.",
+    "progressReset": "Progress reset!",
+    "resetError": "Failed to reset progress",
+    "changesSaved": "Changes saved!",
+    "saveError": "Failed to save changes",
+    "showOnLeaderboard": "Show me on the leaderboard",
+    "unsavedChanges": "Unsaved Changes",
+    "unsavedDesc": "Do you want to save your changes?",
+    "discard": "Discard",
+    "saveChanges": "Save Changes"
   },
   "resetPassword": {
     "title": "Set a new password",
@@ -280,6 +298,27 @@
     "save": "Save password",
     "success": "Password updated!",
     "backToSignIn": "← Back to sign in"
+  },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "subtitle": "Top performers mastering German words",
+    "desc": "Show your name on the leaderboard and compete with others. Earn 🔥 flames for each word you master!",
+    "info": "Your progress will be visible to other users. You can change this in Settings anytime.",
+    "earnFlames": "How to earn flames:",
+    "flame1": "+1 flame for each word you mark as 'known'",
+    "flame2": "Flames track your total mastered words",
+    "joinNow": "Join Leaderboard",
+    "topPlayers": "Top Players",
+    "empty": "No one on the leaderboard yet",
+    "emptyHint": "Be the first to join and start earning flames!",
+    "you": "You",
+    "yourRank": "Your rank:",
+    "flames": "flames",
+    "howItWorks": "How it works:",
+    "info1": "Earn 1 flame for each word you master",
+    "info2": "Only appears on the leaderboard if you opted in",
+    "info3": "Updates in real-time as you learn",
+    "info4": "You can opt-out anytime in Settings"
   },
   "admin": {
     "title": "Admin dashboard",
