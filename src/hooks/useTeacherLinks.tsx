@@ -53,23 +53,26 @@ export function useTeacherLinks() {
 
   React.useEffect(() => {
     if (!user) return
+    const reloadHandler = () => {
+      void load()
+    }
     const channel = supabase
       .channel(`teacher_links_${user.id}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "teacher_links", filter: `student_id=eq.${user.id}` },
-        () => load()
+        reloadHandler
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "teacher_links", filter: `teacher_id=eq.${user.id}` },
-        () => load()
+        reloadHandler
       )
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [user, load])
+  }, [user])
 
   const removeLink = async (linkId: string) => {
     setMyTeachers((prev) => prev.filter((t) => t.link_id !== linkId))

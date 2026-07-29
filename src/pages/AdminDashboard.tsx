@@ -471,12 +471,12 @@ function VocabularyPanel() {
       toast.error(t("admin.selectDeck"))
       return { error: t("admin.selectDeck") }
     }
-    const { error, insertedCount } = await addCards(selectedDeckId, rows, onProgress)
+    const { error, insertedCount, updatedCount } = await addCards(selectedDeckId, rows, onProgress)
     if (error) {
       toast.error(error)
       return { error }
     }
-    toast.success(t("admin.cardsAdded", { count: insertedCount }))
+    toast.success(t("admin.cardsUpserted", { added: insertedCount, updated: updatedCount }))
     return { error: null }
   }
 

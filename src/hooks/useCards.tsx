@@ -31,18 +31,21 @@ export function useDecks(studentId: string | null) {
 
   React.useEffect(() => {
     if (!studentId) return
+    const reloadHandler = () => {
+      void load()
+    }
     const channel = supabase
       .channel(`decks_${studentId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "decks", filter: `owner_id=eq.${studentId}` },
-        () => load()
+        reloadHandler
       )
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [studentId, load])
+  }, [studentId])
 
   const createDeck = async (name: string, ownerId: string, nameEn?: string) => {
     const { data: userData } = await supabase.auth.getUser()
@@ -94,23 +97,26 @@ export function useCards(deckId: string | null) {
 
   React.useEffect(() => {
     if (!deckId) return
+    const reloadHandler = () => {
+      void load()
+    }
     const channel = supabase
       .channel(`cards_${deckId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "cards", filter: `deck_id=eq.${deckId}` },
-        () => load()
+        reloadHandler
       )
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "card_marks" },
-        () => load()
+        reloadHandler
       )
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [deckId, load])
+  }, [deckId])
 
   const addCards = async (
     rows: ParsedCardRow[],
@@ -134,14 +140,18 @@ export function useCards(deckId: string | null) {
       word_de: r.word_de,
       translation_ru: r.translation_ru,
       translation_en: r.translation_en,
+      translation_uk: r.translation_uk,
       group: r.group,
       group_en: r.group_en,
+      group_uk: r.group_uk,
       tags: r.tags,
       description: r.description,
       description_en: r.description_en,
+      description_uk: r.description_uk,
       example_de: r.example_de,
       example_ru: r.example_ru,
       example_en: r.example_en,
+      example_uk: r.example_uk,
       created_by: createdBy,
       sort_order: startOrder + i,
     }))
@@ -216,15 +226,18 @@ export function useAllStudentCards(studentId: string | null) {
 
   React.useEffect(() => {
     if (!studentId) return
+    const reloadHandler = () => {
+      void load()
+    }
     const channel = supabase
       .channel(`all_cards_${studentId}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "cards" }, () => load())
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "card_marks" }, () => load())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "cards" }, reloadHandler)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "card_marks" }, reloadHandler)
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [studentId, load])
+  }, [studentId])
 
   /** Never marked — brand-new words the student hasn't assessed yet. */
   const newCards = React.useMemo(

@@ -378,6 +378,7 @@
     "deckCreated": "Набір створено",
     "addCards": "Додати слова",
     "cardsAdded": "Додано слів: {{count}}",
+    "cardsUpserted": "Додано: {{added}}, оновлено: {{updated}}",
     "noDecksByStudent": "Поки немає наборів у цього учня",
     "cards": "слів"
   }

@@ -16,48 +16,54 @@ export function useDashboardData(studentId: string | null): DashboardData {
   }>({ decks: [], cards: [] })
   const [loading, setLoading] = React.useState(true)
 
-  const load = React.useCallback(async () => {
-    if (!studentId) {
-      setData({ decks: [], cards: [] })
-      setLoading(false)
-      return
-    }
+  // Load data - memoized to never recreate
+  const load = React.useMemo(() => {
+    return async () => {
+      if (!studentId) {
+        setData({ decks: [], cards: [] })
+        setLoading(false)
+        return
+      }
 
-    setLoading(true)
-    try {
-      const [decksRes, cardsRes] = await Promise.all([
-        supabase
-          .from("decks")
-          .select("*")
-          .eq("owner_id", studentId)
-          .eq("is_template", false)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("cards_with_marks")
-          .select("*")
-          .eq("owner_id", studentId)
-          .eq("deck_is_template", false)
-          .order("sort_order", { ascending: true }),
-      ])
+      setLoading(true)
+      try {
+        const [decksRes, cardsRes] = await Promise.all([
+          supabase
+            .from("decks")
+            .select("*")
+            .eq("owner_id", studentId)
+            .eq("is_template", false)
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("cards_with_marks")
+            .select("*")
+            .eq("owner_id", studentId)
+            .eq("deck_is_template", false)
+            .order("sort_order", { ascending: true }),
+        ])
 
-      setData({
-        decks: (decksRes.data as Deck[]) ?? [],
-        cards: (cardsRes.data as CardWithMarks[]) ?? [],
-      })
-    } finally {
-      setLoading(false)
+        setData({
+          decks: (decksRes.data as Deck[]) ?? [],
+          cards: (cardsRes.data as CardWithMarks[]) ?? [],
+        })
+      } finally {
+        setLoading(false)
+      }
     }
   }, [studentId])
 
+  // Initial load
   React.useEffect(() => {
-    load()
+    void load()
   }, [load])
 
+  // Realtime subscriptions - only depends on studentId
   React.useEffect(() => {
     if (!studentId) return
 
-    const channel = supabase
-      .channel(`dashboard_${studentId}`)
+    const channel = supabase.channel(`dashboard_${studentId}`)
+
+    channel
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "decks", filter: `owner_id=eq.${studentId}` },

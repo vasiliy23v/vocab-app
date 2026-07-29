@@ -2,7 +2,7 @@ import * as React from "react"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/hooks/useAuth"
 import { useDashboardData, useDerivedCardSets } from "@/hooks/useDashboardData"
-import type { CardWithMarks, MarkStatus } from "@/types/db"
+import type { CardWithMarks, Deck, MarkStatus } from "@/types/db"
 
 /**
  * Which "page" of the student dashboard is showing. This lives above
@@ -16,6 +16,7 @@ export type DashboardSection = "decks" | "review" | "mastered" | "table"
 interface DashboardSectionContextValue {
   section: DashboardSection
   setSection: (s: DashboardSection) => void
+  decks: Deck[]
   cards: CardWithMarks[]
   newCards: CardWithMarks[]
   reviewQueue: CardWithMarks[]
@@ -32,7 +33,7 @@ const DashboardSectionContext = React.createContext<DashboardSectionContextValue
 
 export function DashboardSectionProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
-  const { cards, loading } = useDashboardData(user?.id ?? null)
+  const { decks, cards, loading } = useDashboardData(user?.id ?? null)
   const { newCards, reviewQueue, masteredCards } = useDerivedCardSets(cards)
   const [section, setSection] = React.useState<DashboardSection>("decks")
   const [goalDialogOpen, setGoalDialogOpen] = React.useState(false)
@@ -54,6 +55,7 @@ export function DashboardSectionProvider({ children }: { children: React.ReactNo
     () => ({
       section,
       setSection,
+      decks,
       cards,
       newCards,
       reviewQueue,
@@ -63,7 +65,7 @@ export function DashboardSectionProvider({ children }: { children: React.ReactNo
       goalDialogOpen,
       setGoalDialogOpen,
     }),
-    [section, cards, newCards, reviewQueue, masteredCards, loading, setOwnMark, goalDialogOpen]
+    [section, decks, cards, newCards, reviewQueue, masteredCards, loading, setOwnMark, goalDialogOpen]
   )
 
   return <DashboardSectionContext.Provider value={value}>{children}</DashboardSectionContext.Provider>

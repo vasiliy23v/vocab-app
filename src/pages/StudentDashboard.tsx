@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next"
 import { useAuth } from "@/hooks/useAuth"
 import { useCards } from "@/hooks/useCards"
 import { useDashboardSection } from "@/hooks/useDashboardSection"
-import { useDashboardData } from "@/hooks/useDashboardData"
 import { createDeck, deleteDeck } from "@/lib/deckOperations"
 import { UploadDialog } from "@/components/UploadDialog"
 import { Flashcard } from "@/components/Flashcard"
@@ -41,8 +40,7 @@ type View =
 export default function StudentDashboard() {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
-  const { decks } = useDashboardData(user?.id ?? null)
-  const { section, cards, newCards, reviewQueue, masteredCards, loading: allLoading, setOwnMark, setGoalDialogOpen } =
+  const { decks, section, cards, newCards, reviewQueue, masteredCards, loading: allLoading, setOwnMark, setGoalDialogOpen } =
     useDashboardSection()
   const { streak, bump: bumpStreak } = useStudyStreak()
   const { wordsPerDay } = useDailyGoal()
@@ -95,7 +93,7 @@ export default function StudentDashboard() {
     onProgress?: (done: number, total: number) => void,
     deckNameEn?: string
   ) => {
-    const { deck, error } = await createDeck(deckName || t("dashboard.defaultDeckName"), user!.id, deckNameEn)
+    const { deck, error } = await createDeck(deckName || t("dashboard.defaultDeckName"), user.id, deckNameEn)
     if (error || !deck) {
       const msg = error || t("dashboard.createDeckError")
       toast.error(msg)

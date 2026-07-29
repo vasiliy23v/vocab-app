@@ -51,9 +51,12 @@ export function useAdminUserDecks(userId: string | null) {
     rows: ParsedCardRow[],
     onProgress?: (done: number, total: number) => void
   ) => {
-    // Insert in batches to handle large uploads (1000+)
+    // Insert/update in batches to handle large uploads (1000+).
+    // Upserts by (deck_id, word_de) — re-uploading a CSV to refresh an
+    // existing deck updates matching words instead of duplicating them.
     const BATCH_SIZE = 250
     let totalInserted = 0
+    let totalUpdated = 0
 
     for (let i = 0; i < rows.length; i += BATCH_SIZE) {
       const batch = rows.slice(i, i + BATCH_SIZE)
@@ -61,25 +64,30 @@ export function useAdminUserDecks(userId: string | null) {
         word_de: r.word_de,
         translation_ru: r.translation_ru,
         translation_en: r.translation_en,
+        translation_uk: r.translation_uk,
         group: r.group,
         group_en: r.group_en,
+        group_uk: r.group_uk,
         tags: r.tags,
         description: r.description,
         description_en: r.description_en,
+        description_uk: r.description_uk,
         example_de: r.example_de,
         example_ru: r.example_ru,
         example_en: r.example_en,
+        example_uk: r.example_uk,
       }))
 
-      const { data, error } = await supabase.rpc("admin_add_cards_to_deck", {
+      const { data, error } = await supabase.rpc("admin_upsert_cards_to_deck", {
         p_deck_id: deckId,
         p_cards: payload,
       })
 
       if (error) {
         return {
-          error: `${error.message} (${totalInserted} cards already inserted)`,
+          error: `${error.message} (${totalInserted + totalUpdated} cards processed)`,
           insertedCount: totalInserted,
+          updatedCount: totalUpdated,
         }
       }
 
@@ -87,18 +95,20 @@ export function useAdminUserDecks(userId: string | null) {
         const result = data[0]
         if (result.error_message) {
           return {
-            error: `${result.error_message} (${totalInserted + result.inserted_count} cards inserted)`,
+            error: `${result.error_message} (${totalInserted + totalUpdated + result.inserted_count + result.updated_count} cards processed)`,
             insertedCount: totalInserted + result.inserted_count,
+            updatedCount: totalUpdated + result.updated_count,
           }
         }
         totalInserted += result.inserted_count
+        totalUpdated += result.updated_count
       }
 
-      onProgress?.(totalInserted, rows.length)
+      onProgress?.(totalInserted + totalUpdated, rows.length)
     }
 
     await load()
-    return { error: null, insertedCount: totalInserted }
+    return { error: null, insertedCount: totalInserted, updatedCount: totalUpdated }
   }
 
   const addMultilingualCards = async (

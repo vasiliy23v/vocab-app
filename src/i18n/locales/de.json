@@ -373,6 +373,7 @@
     "deckCreated": "Deck erstellt",
     "addCards": "Wörter hinzufügen",
     "cardsAdded": "Wörter hinzugefügt: {{count}}",
+    "cardsUpserted": "Hinzugefügt: {{added}}, aktualisiert: {{updated}}",
     "noDecksByStudent": "Dieser Schüler hat noch keine Decks",
     "cards": "Wörter"
   }

@@ -377,6 +377,7 @@
     "deckCreated": "Набор создан",
     "addCards": "Добавить слова",
     "cardsAdded": "Добавлено слов: {{count}}",
+    "cardsUpserted": "Добавлено: {{added}}, обновлено: {{updated}}",
     "noDecksByStudent": "Пока нет наборов у этого ученика",
     "cards": "слов"
   }

@@ -1,18 +1,23 @@
 /**
- * Cards store two translation fields: `translation_ru` (Russian) and
- * `translation_en` (English). Which one is shown depends on the current
- * interface language — this is independent from the i18n system that
- * translates the app's own UI strings.
+ * Cards store three translation fields: `translation_ru` (Russian,
+ * always present — the fallback), `translation_en` (English) and
+ * `translation_uk` (Ukrainian). Which one is shown depends on the
+ * current interface language — this is independent from the i18n
+ * system that translates the app's own UI strings.
  */
 export interface Translatable {
   translation_ru: string
   translation_en?: string | null
+  translation_uk?: string | null
   word_de?: string
 }
 
 export function cardTranslation(card: Translatable, language: string): string {
   if (language.startsWith("en")) {
     return card.translation_en?.trim() ? card.translation_en : card.translation_ru
+  }
+  if (language.startsWith("uk")) {
+    return card.translation_uk?.trim() ? card.translation_uk : card.translation_ru
   }
   return card.translation_ru
 }
@@ -27,6 +32,9 @@ export function getCardFront(card: Translatable, languageFrom: string): string {
   }
   if (languageFrom === "en") {
     return card.translation_en?.trim() ? card.translation_en : card.translation_ru
+  }
+  if (languageFrom === "uk") {
+    return card.translation_uk?.trim() ? card.translation_uk : card.translation_ru
   }
   if (languageFrom === "de") {
     return card.word_de || ""
@@ -48,41 +56,53 @@ export function getCardBack(card: Translatable, languageTo: string): string {
   if (languageTo === "en") {
     return card.translation_en?.trim() ? card.translation_en : card.translation_ru
   }
+  if (languageTo === "uk") {
+    return card.translation_uk?.trim() ? card.translation_uk : card.translation_ru
+  }
   return card.word_de || ""
 }
 
 /**
  * Topic/group names follow the same pattern: `group` (Russian) is
- * required, `group_en` is optional and falls back to `group` when
- * blank or not provided (e.g. older uploads, or custom groups the
- * user typed without an English name).
+ * required, `group_en`/`group_uk` are optional and fall back to `group`
+ * when blank or not provided (e.g. older uploads, or custom groups the
+ * user typed without a translated name).
  */
 export interface GroupTranslatable {
   group: string
   group_en?: string | null
+  group_uk?: string | null
 }
 
 export function cardGroupName(card: GroupTranslatable, language: string): string {
   if (language.startsWith("en")) {
     return card.group_en?.trim() ? card.group_en : card.group
   }
+  if (language.startsWith("uk")) {
+    return card.group_uk?.trim() ? card.group_uk : card.group
+  }
   return card.group
 }
 
 /**
  * Example sentences follow the same pattern: `example_ru` is the
- * default, `example_en` is optional and falls back to `example_ru`
- * when blank (e.g. older uploads without an English example).
+ * default, `example_en`/`example_uk` are optional and fall back to
+ * `example_ru` when blank (e.g. older uploads without a translated
+ * example).
  */
 export interface ExampleTranslatable {
   example_ru: string
   example_en?: string | null
+  example_uk?: string | null
   example_de?: string
 }
 
 export function cardExample(card: ExampleTranslatable, language: string): string {
   if (language.startsWith("en")) {
     return card.example_en?.trim() ? card.example_en : card.example_ru
+  }
+  if (language.startsWith("uk")) {
+    return card.example_uk?.trim() ? card.example_uk : card.example_ru
   }
   return card.example_ru
 }
@@ -97,23 +117,30 @@ export function getCardExample(card: ExampleTranslatable, languageTo: string): s
   if (languageTo === "en") {
     return card.example_en?.trim() || card.example_ru
   }
+  if (languageTo === "uk") {
+    return card.example_uk?.trim() || card.example_ru
+  }
   return card.example_ru
 }
 
 /**
  * Descriptions (grammar/usage notes, synonyms, gender, etc.) follow the
- * same pattern: `description` (Russian) is the default, `description_en`
- * is optional and falls back to `description` when blank (e.g. older
- * uploads without an English description).
+ * same pattern: `description` (Russian) is the default, `description_en`/
+ * `description_uk` are optional and fall back to `description` when
+ * blank (e.g. older uploads without a translated description).
  */
 export interface DescriptionTranslatable {
   description: string
   description_en?: string | null
+  description_uk?: string | null
 }
 
 export function cardDescription(card: DescriptionTranslatable, language: string): string {
   if (language.startsWith("en")) {
     return card.description_en?.trim() ? card.description_en : card.description
+  }
+  if (language.startsWith("uk")) {
+    return card.description_uk?.trim() ? card.description_uk : card.description
   }
   return card.description
 }

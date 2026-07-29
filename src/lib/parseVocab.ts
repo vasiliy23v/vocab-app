@@ -23,7 +23,29 @@ export interface MultilingualParseResult {
 }
 
 /**
- * Legacy parser for backward compatibility (DE→RU/EN format)
+ * Column lookup that accepts several aliases for the same field —
+ * lets the parser understand both the narrow legacy header set
+ * (word, translation, example_ru, ...) and the wide multilingual one
+ * (word_de, translation_ru, example_ua, ...) without two code paths.
+ * "ua" is accepted as an alias for "uk" (Ukrainian) since that's what
+ * some source spreadsheets use.
+ */
+function findCol(headers: string[], ...names: string[]): number {
+  for (const name of names) {
+    const i = headers.indexOf(name)
+    if (i >= 0) return i
+  }
+  return -1
+}
+
+/**
+ * Parser for vocabulary CSV/TSV uploads. Supports two header layouts:
+ * - narrow (legacy): word, translation, translation_en, group, group_en,
+ *   tags, description, description_en, example_de, example_ru, example_en
+ * - wide (multilingual export): word_de, translation_ru, translation_en,
+ *   translation_uk/translation_ua, group_ru/group, group_en, group_uk/ua,
+ *   tags_ru/tags, description_ru/description, description_en,
+ *   description_uk/ua, example_de, example_ru, example_en, example_uk/ua
  */
 export function parseVocabText(raw: string): ParseResult {
   const lines = raw.trim().split(/\r?\n/).filter((l) => l.trim())
@@ -32,40 +54,50 @@ export function parseVocabText(raw: string): ParseResult {
   const sep = lines[0].includes("\t") ? "\t" : ","
   const headers = lines[0].split(sep).map((h) => h.trim().toLowerCase().replace(/"/g, ""))
 
-  const wi = headers.indexOf("word")
-  const ti = headers.indexOf("translation")
+  const wi = findCol(headers, "word_de", "word")
+  const ti = findCol(headers, "translation_ru", "translation")
   if (wi < 0 || ti < 0) {
     return { cards: [], error: "missing_columns" }
   }
 
-  const tei = headers.indexOf("translation_en")
-  const gi = headers.indexOf("group")
-  const gei = headers.indexOf("group_en")
-  const tgi = headers.indexOf("tags")
-  const di = headers.indexOf("description")
-  const dei = headers.indexOf("description_en")
-  const ei = headers.indexOf("example_de")
-  const eri = headers.indexOf("example_ru")
-  const eei = headers.indexOf("example_en")
+  const tei = findCol(headers, "translation_en")
+  const tui = findCol(headers, "translation_uk", "translation_ua")
+  const gi = findCol(headers, "group_ru", "group")
+  const gei = findCol(headers, "group_en")
+  const gui = findCol(headers, "group_uk", "group_ua")
+  const tgi = findCol(headers, "tags_ru", "tags")
+  const di = findCol(headers, "description_ru", "description")
+  const dei = findCol(headers, "description_en")
+  const dui = findCol(headers, "description_uk", "description_ua")
+  const ei = findCol(headers, "example_de")
+  const eri = findCol(headers, "example_ru")
+  const eei = findCol(headers, "example_en")
+  const eui = findCol(headers, "example_uk", "example_ua")
+
+  const col = (cols: string[], idx: number) => (idx >= 0 ? cols[idx]?.trim() ?? "" : "")
 
   const cards: ParsedCardRow[] = []
   for (let i = 1; i < lines.length; i++) {
     const cols = splitLine(lines[i], sep)
-    const de = cols[wi]?.trim()
-    const ru = cols[ti]?.trim()
+    const de = col(cols, wi)
+    const ru = col(cols, ti)
     if (!de || !ru) continue
     cards.push({
       word_de: de,
       translation_ru: ru,
-      translation_en: tei >= 0 ? cols[tei]?.trim() ?? "" : "",
-      group: gi >= 0 ? cols[gi]?.trim() ?? "" : "",
-      group_en: gei >= 0 ? cols[gei]?.trim() ?? "" : "",
-      tags: tgi >= 0 ? (cols[tgi]?.trim() ?? "").split(";").map((t) => t.trim()).filter(Boolean) : [],
-      description: di >= 0 ? cols[di]?.trim() ?? "" : "",
-      description_en: dei >= 0 ? cols[dei]?.trim() ?? "" : "",
-      example_de: ei >= 0 ? cols[ei]?.trim() ?? "" : "",
-      example_ru: eri >= 0 ? cols[eri]?.trim() ?? "" : "",
-      example_en: eei >= 0 ? cols[eei]?.trim() ?? "" : "",
+      translation_en: col(cols, tei),
+      translation_uk: col(cols, tui),
+      group: col(cols, gi),
+      group_en: col(cols, gei),
+      group_uk: col(cols, gui),
+      tags: col(cols, tgi).split(";").map((t) => t.trim()).filter(Boolean),
+      description: col(cols, di),
+      description_en: col(cols, dei),
+      description_uk: col(cols, dui),
+      example_de: col(cols, ei),
+      example_ru: col(cols, eri),
+      example_en: col(cols, eei),
+      example_uk: col(cols, eui),
     })
   }
 

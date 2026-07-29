@@ -80,14 +80,18 @@ export interface Card {
   word_de: string
   translation_ru: string
   translation_en: string
+  translation_uk: string
   group: string
   group_en: string
+  group_uk: string
   tags: string[]
   description: string
   description_en: string
+  description_uk: string
   example_de: string
   example_ru: string
   example_en: string
+  example_uk: string
   created_by: string | null
   sort_order: number
   created_at: string
@@ -112,19 +116,26 @@ export interface CardWithMarks extends Card {
   own_marked_at: string | null
 }
 
-// raw row shape coming back from the parsed TSV/CSV upload, before insert
+// raw row shape coming back from the parsed TSV/CSV upload, before insert.
+// The _uk fields are optional since most source sheets (including the
+// starter deck) don't provide Ukrainian content — omitted keys just fall
+// back to the DB column's default('') on insert.
 export interface ParsedCardRow {
   word_de: string
   translation_ru: string
   translation_en: string
+  translation_uk?: string
   group: string
   group_en: string
+  group_uk?: string
   tags: string[]
   description: string
   description_en: string
+  description_uk?: string
   example_de: string
   example_ru: string
   example_en: string
+  example_uk?: string
 }
 
 // Multilingual system types
