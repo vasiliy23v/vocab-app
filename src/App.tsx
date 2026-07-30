@@ -1,5 +1,5 @@
 import * as React from "react"
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom"
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { AuthProvider, useAuth } from "@/hooks/useAuth"
@@ -16,6 +16,7 @@ import TeacherStudentPage from "@/pages/TeacherStudentPage"
 import AdminDashboard from "@/pages/AdminDashboard"
 import ResetPasswordPage from "@/pages/ResetPasswordPage"
 import LeaderboardPage from "@/pages/LeaderboardPage"
+import ShopPage from "@/pages/ShopPage"
 import { LanguageOnboardingDialog } from "@/components/LanguageOnboardingDialog"
 import { UILanguageOnboardingDialog } from "@/components/UILanguageOnboardingDialog"
 import { LeaderboardOptInDialog } from "@/components/LeaderboardOptInDialog"
@@ -25,7 +26,10 @@ import { PwaInstallPrompt } from "@/components/PwaInstallPrompt"
 import type { Language } from "@/types/db"
 import { LANGUAGE_STORAGE_KEY } from "@/i18n"
 
-function RequireAuth({ children }: { children: React.ReactNode }) {
+/** Layout route: mounted once for every path below, so the dashboard's
+ *  data fetching (in DashboardSectionProvider) survives navigating
+ *  between them — only the <Outlet />'s matched child page swaps. */
+function RequireAuth() {
   const { user, loading } = useAuth()
   const location = useLocation()
   const { t } = useTranslation()
@@ -42,7 +46,9 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   }
   return (
     <DashboardSectionProvider>
-      <AppLayout>{children}</AppLayout>
+      <AppLayout>
+        <Outlet />
+      </AppLayout>
     </DashboardSectionProvider>
   )
 }
@@ -146,56 +152,25 @@ function AppRoutes() {
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/invite/:code" element={<InvitePage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route
-          path="/"
-          element={
-            <RequireAuth>
-              <HomePage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/people"
-          element={
-            <RequireAuth>
-              <PeoplePage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/settings"
-          element={
-            <RequireAuth>
-              <SettingsPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/student/:studentId"
-          element={
-            <RequireAuth>
-              <TeacherStudentPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            <RequireAuth>
+        <Route element={<RequireAuth />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/review" element={<HomePage />} />
+          <Route path="/mastered" element={<HomePage />} />
+          <Route path="/table" element={<HomePage />} />
+          <Route path="/people" element={<PeoplePage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/student/:studentId" element={<TeacherStudentPage />} />
+          <Route path="/leaderboard" element={<LeaderboardPage />} />
+          <Route path="/shop" element={<ShopPage />} />
+          <Route
+            path="/admin"
+            element={
               <RequireAdmin>
                 <AdminDashboard />
               </RequireAdmin>
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/leaderboard"
-          element={
-            <RequireAuth>
-              <LeaderboardPage />
-            </RequireAuth>
-          }
-        />
+            }
+          />
+        </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>

@@ -1,17 +1,33 @@
 import * as React from "react"
+import { useLocation, useNavigate } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/hooks/useAuth"
 import { useDashboardData, useDerivedCardSets } from "@/hooks/useDashboardData"
 import type { CardWithMarks, Deck, MarkStatus } from "@/types/db"
 
 /**
- * Which "page" of the student dashboard is showing. This lives above
- * StudentDashboard (in the route tree, alongside AppLayout) so the
- * sidebar can render Review/Mastered/Word table as real navigation
- * items — clicking one swaps the dashboard's main content without
- * either component needing to reach into the other's local state.
+ * Which "page" of the student dashboard is showing. Backed by the URL
+ * (/, /review, /mastered, /table) rather than local state, so the
+ * sidebar can render these as plain <Link>s with real active-route
+ * highlighting and the browser back/forward buttons work — while the
+ * data fetching below stays here in the provider (mounted once above
+ * the route outlet), so switching sections never re-fetches.
  */
 export type DashboardSection = "decks" | "review" | "mastered" | "table"
+
+const SECTION_PATHS: Record<DashboardSection, string> = {
+  decks: "/",
+  review: "/review",
+  mastered: "/mastered",
+  table: "/table",
+}
+
+function sectionFromPath(pathname: string): DashboardSection {
+  if (pathname === "/review") return "review"
+  if (pathname === "/mastered") return "mastered"
+  if (pathname === "/table") return "table"
+  return "decks"
+}
 
 interface DashboardSectionContextValue {
   section: DashboardSection
@@ -33,9 +49,15 @@ const DashboardSectionContext = React.createContext<DashboardSectionContextValue
 
 export function DashboardSectionProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
   const { decks, cards, loading } = useDashboardData(user?.id ?? null)
   const { newCards, reviewQueue, masteredCards } = useDerivedCardSets(cards)
-  const [section, setSection] = React.useState<DashboardSection>("decks")
+  const section = sectionFromPath(location.pathname)
+  const setSection = React.useCallback(
+    (s: DashboardSection) => navigate(SECTION_PATHS[s]),
+    [navigate]
+  )
   const [goalDialogOpen, setGoalDialogOpen] = React.useState(false)
 
   const setOwnMark = React.useCallback(

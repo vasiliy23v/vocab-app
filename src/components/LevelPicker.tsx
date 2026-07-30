@@ -4,7 +4,11 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { splitIntoLevels } from "@/lib/levels"
 import { formatCount } from "@/lib/formatCount"
+import { PixelWarrior } from "@/components/PixelWarrior"
 import { Check, Lock } from "lucide-react"
+
+/** Rendered height of PixelWarrior (h-9), used to centre it on a row. */
+const WARRIOR_HEIGHT = 36
 
 interface LevelPickerProps<T> {
   items: T[]
@@ -52,10 +56,35 @@ export function LevelPicker<T>({
   )
   const currentIndex = unlocked.findIndex((u, i) => u && !cleared[i])
   const currentRef = React.useRef<HTMLButtonElement>(null)
+  const pathRef = React.useRef<HTMLDivElement>(null)
 
   React.useEffect(() => {
     currentRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
   }, [currentIndex])
+
+  // Vertical offset of the warrior sprite: it stands on whichever level is
+  // current, and animates down the path when one is cleared. Measured from
+  // the live row rather than assuming a fixed row height, since rows grow
+  // with renderLevelExtra content. null until measured, so it never flashes
+  // at the top before settling.
+  const [warriorTop, setWarriorTop] = React.useState<number | null>(null)
+
+  React.useLayoutEffect(() => {
+    const row = currentRef.current
+    const path = pathRef.current
+    if (!row || !path || currentIndex < 0) {
+      setWarriorTop(null)
+      return
+    }
+    const measure = () => {
+      setWarriorTop(row.offsetTop + row.offsetHeight / 2 - WARRIOR_HEIGHT / 2)
+    }
+    measure()
+    // Rows reflow on resize (labels wrap), which moves the target.
+    const observer = new ResizeObserver(measure)
+    observer.observe(path)
+    return () => observer.disconnect()
+  }, [currentIndex, levels.length])
 
   return (
     <div className="space-y-5">
@@ -87,9 +116,21 @@ export function LevelPicker<T>({
         </span>
       </div>
 
-      <div className="relative space-y-2">
+      <div ref={pathRef} className="relative space-y-2">
         {levels.length > 1 && (
           <div className="absolute left-[19px] top-5 bottom-5 w-px bg-border" aria-hidden />
+        )}
+        {/* The warrior only appears on the gated learning path (where
+            isLevelComplete defines progress) — on the ungated review and
+            mastered lists there's no "current" level for it to stand on. */}
+        {isLevelComplete && warriorTop !== null && (
+          <div
+            className="pointer-events-none absolute right-3 z-20 transition-[top] duration-700 ease-in-out"
+            style={{ top: warriorTop }}
+            aria-hidden
+          >
+            <PixelWarrior />
+          </div>
         )}
         {levels.map((lvl, i) => {
           const start = i * levelSize + 1
@@ -105,27 +146,33 @@ export function LevelPicker<T>({
               disabled={!isUnlocked}
               title={!isUnlocked ? t("levelPicker.locked", { n: i }) : undefined}
               className={cn(
-                "relative z-10 flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors",
+                // bg-card (not transparent) so the connector line running
+                // behind the list only shows in the gaps between rows.
+                // Locked rows are dimmed via muted text rather than
+                // element opacity, which would let the line bleed through.
+                "relative z-10 flex w-full items-center gap-3 rounded-lg border bg-card p-3 text-left transition-colors",
                 isUnlocked
                   ? "hover:border-foreground/40 hover:bg-muted/40"
-                  : "cursor-not-allowed opacity-50",
+                  : "cursor-not-allowed",
                 selectedLevel === i && "border-foreground bg-muted/40",
-                isCurrent && "border-primary/50 bg-primary/5"
+                isCurrent && "border-orange-300 bg-orange-50/60 dark:border-orange-900 dark:bg-orange-950/20"
               )}
             >
               <span
                 className={cn(
                   "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-sm font-semibold",
                   isCleared && "border-success bg-success text-success-foreground",
-                  !isCleared && isUnlocked && "border-foreground bg-foreground text-background",
+                  !isCleared && isUnlocked && "border-orange-500 bg-orange-500 text-white",
                   !isUnlocked && "border-border bg-muted text-muted-foreground"
                 )}
               >
                 {isCleared ? <Check className="h-5 w-5" /> : !isUnlocked ? <Lock className="h-4 w-4" /> : i + 1}
               </span>
               <span className="min-w-0 flex-1">
-                <div className="text-sm font-medium">{t("levelPicker.levelLabel", { n: i + 1 })}</div>
-                <div className="text-xs text-muted-foreground">
+                <div className={cn("text-sm font-medium", !isUnlocked && "text-muted-foreground")}>
+                  {t("levelPicker.levelLabel", { n: i + 1 })}
+                </div>
+                <div className={cn("text-xs", isUnlocked ? "text-muted-foreground" : "text-muted-foreground/60")}>
                   {start}–{end} · {t("common.wordsCount", { count: formatCount(lvl.length) })}
                 </div>
                 {renderLevelExtra?.(lvl, i)}

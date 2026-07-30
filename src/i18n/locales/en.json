@@ -88,6 +88,10 @@
     "wordTableHeading": "Word table",
     "allDecks": "All decks",
     "decksHeading": "Decks",
+    "tabDecks": "Decks",
+    "tabReview": "Review",
+    "tabMastered": "Mastered",
+    "tabTable": "Words",
     "noDecks": "No decks yet — upload your first one!",
     "emptyStateTitle": "Add your first deck to start learning",
     "emptyStateDesc": "Upload a list of words and start reviewing right away.",
@@ -298,6 +302,18 @@
     "save": "Save password",
     "success": "Password updated!",
     "backToSignIn": "← Back to sign in"
+  },
+  "shop": {
+    "title": "Shop",
+    "tabShop": "Shop",
+    "desc": "Spend the flames you earn for mastered words on heroes.",
+    "comingSoon": "Coming soon…",
+    "balanceHint": "Your flames",
+    "priceFlames": "flames",
+    "heroMage": "Mage",
+    "heroWarrior": "Warrior",
+    "heroArcher": "Archer",
+    "heroDragon": "Dragon"
   },
   "leaderboard": {
     "title": "Leaderboard",

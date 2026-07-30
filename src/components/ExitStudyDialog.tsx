@@ -9,6 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { PixelCat } from "@/components/PixelCat"
 
 /** Warns the student that leaving mid-lesson discards session progress. */
 export function ExitStudyDialog({
@@ -25,12 +26,9 @@ export function ExitStudyDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-w-sm">
         <AlertDialogHeader>
-          <pre
-            aria-hidden
-            className="select-none py-2 text-center font-mono text-2xl leading-tight text-muted-foreground"
-          >{`  /\\_/\\
- >(0.0)<
-  (   )`}</pre>
+          <div className="flex justify-center py-2">
+            <PixelCat className="h-24 w-auto" />
+          </div>
           <AlertDialogTitle>{t("study.exitTitle")}</AlertDialogTitle>
           <AlertDialogDescription>{t("study.exitDesc")}</AlertDialogDescription>
         </AlertDialogHeader>

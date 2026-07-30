@@ -9,23 +9,34 @@ interface DashboardData {
   loading: boolean
 }
 
+type Snapshot = { decks: Deck[]; cards: CardWithMarks[] }
+
+const EMPTY: Snapshot = { decks: [], cards: [] }
+
+/** Last known data per student, kept outside React so a remount (or a
+ *  second consumer) starts from what we already fetched instead of an
+ *  empty list plus a loading spinner. Realtime keeps entries fresh. */
+const cache = new Map<string, Snapshot>()
+
 export function useDashboardData(studentId: string | null): DashboardData {
-  const [data, setData] = React.useState<{
-    decks: Deck[]
-    cards: CardWithMarks[]
-  }>({ decks: [], cards: [] })
-  const [loading, setLoading] = React.useState(true)
+  const [data, setData] = React.useState<Snapshot>(
+    () => (studentId && cache.get(studentId)) || EMPTY
+  )
+  // Only a first-ever load blocks on a spinner; refetches trigged by
+  // realtime updates swap the data in silently, so a card mark or an
+  // import doesn't flash the whole page back to skeletons.
+  const [loading, setLoading] = React.useState(() => !(studentId && cache.has(studentId)))
 
   // Load data - memoized to never recreate
   const load = React.useMemo(() => {
     return async () => {
       if (!studentId) {
-        setData({ decks: [], cards: [] })
+        setData(EMPTY)
         setLoading(false)
         return
       }
 
-      setLoading(true)
+      if (!cache.has(studentId)) setLoading(true)
       try {
         const [decksRes, cardsRes] = await Promise.all([
           supabase
@@ -42,13 +53,24 @@ export function useDashboardData(studentId: string | null): DashboardData {
             .order("sort_order", { ascending: true }),
         ])
 
-        setData({
+        const next: Snapshot = {
           decks: (decksRes.data as Deck[]) ?? [],
           cards: (cardsRes.data as CardWithMarks[]) ?? [],
-        })
+        }
+        cache.set(studentId, next)
+        setData(next)
       } finally {
         setLoading(false)
       }
+    }
+  }, [studentId])
+
+  // Adopt another consumer's cached data when switching students.
+  React.useEffect(() => {
+    const cached = studentId ? cache.get(studentId) : undefined
+    if (cached) {
+      setData(cached)
+      setLoading(false)
     }
   }, [studentId])
 

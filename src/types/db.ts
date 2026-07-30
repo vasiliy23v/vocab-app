@@ -24,6 +24,8 @@ export interface Profile {
   language_to: Language
   /** Whether the student's flame count is visible on the public leaderboard. */
   show_on_leaderboard: boolean
+  /** Earned 🔥 — one per word mastered. The shop's currency. */
+  flames_count: number
 }
 
 export interface TeacherLink {

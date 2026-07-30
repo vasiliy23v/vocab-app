@@ -88,6 +88,10 @@
     "masteredDesc": "Слова, позначені як «знає» — вами при вивченні або вчителем.",
     "wordTableHeading": "Таблиця слів",
     "allDecks": "Усі набори",
+    "tabDecks": "Набори",
+    "tabReview": "Повторити",
+    "tabMastered": "Вивчено",
+    "tabTable": "Слова",
     "decksHeading": "Набори карточок",
     "noDecks": "Поки немає наборів — завантажте перший!",
     "emptyStateTitle": "Додайте перший набір, щоб розпочати навчання",
@@ -303,6 +307,18 @@
     "save": "Зберегти пароль",
     "success": "Пароль оновлено!",
     "backToSignIn": "← Назад до входу"
+  },
+  "shop": {
+    "title": "Магазин",
+    "tabShop": "Магазин",
+    "desc": "Витрачай огники, зароблені за вивчені слова, на героїв.",
+    "comingSoon": "Скоро…",
+    "balanceHint": "Твої огники",
+    "priceFlames": "огників",
+    "heroMage": "Маг",
+    "heroWarrior": "Воїн",
+    "heroArcher": "Лучник",
+    "heroDragon": "Дракон"
   },
   "leaderboard": {
     "title": "Дошка лідерів",

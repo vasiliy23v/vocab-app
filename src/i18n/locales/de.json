@@ -87,6 +87,10 @@
     "masteredDesc": "Wörter, die als 'bekannt' markiert sind — von Ihnen beim Lernen oder von Ihrem Lehrer.",
     "wordTableHeading": "Wörterliste",
     "allDecks": "Alle Decks",
+    "tabDecks": "Decks",
+    "tabReview": "Üben",
+    "tabMastered": "Gelernt",
+    "tabTable": "Wörter",
     "decksHeading": "Karteikasten-Decks",
     "noDecks": "Noch keine Decks — laden Sie Ihr erstes hoch!",
     "emptyStateTitle": "Fügen Sie Ihr erstes Deck hinzu, um zu beginnen",
@@ -298,6 +302,18 @@
     "save": "Passwort speichern",
     "success": "Passwort aktualisiert!",
     "backToSignIn": "← Zurück zur Anmeldung"
+  },
+  "shop": {
+    "title": "Shop",
+    "tabShop": "Shop",
+    "desc": "Gib die Flammen, die du für gelernte Wörter verdienst, für Helden aus.",
+    "comingSoon": "Bald verfügbar…",
+    "balanceHint": "Deine Flammen",
+    "priceFlames": "Flammen",
+    "heroMage": "Magier",
+    "heroWarrior": "Krieger",
+    "heroArcher": "Bogenschütze",
+    "heroDragon": "Drache"
   },
   "leaderboard": {
     "title": "Bestenliste",

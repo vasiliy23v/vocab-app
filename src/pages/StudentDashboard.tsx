@@ -20,6 +20,7 @@ import { isLevelCleared } from "@/lib/cardStatus"
 import { cardTranslation, cardDescription, deckName as deckDisplayName } from "@/lib/cardTranslation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -68,7 +69,19 @@ export default function StudentDashboard() {
     })
   }, [tableCards, tableSearch, i18n.language])
 
-  const { cards: deckCards, addCards } = useCards(activeDeckId)
+  /** Cards grouped by deck, so each deck row can read its own slice out of
+   *  the one already-loaded set instead of fetching for itself. */
+  const cardsByDeck = React.useMemo(() => {
+    const map = new Map<string, CardWithMarks[]>()
+    for (const c of cards) {
+      const list = map.get(c.deck_id)
+      if (list) list.push(c)
+      else map.set(c.deck_id, [c])
+    }
+    return map
+  }, [cards])
+
+  const { addCards } = useCards(activeDeckId)
 
   // Clicking Review/Mastered/Word table/decks in the sidebar only updates
   // `section` (it lives above this component, in DashboardSectionProvider).
@@ -168,8 +181,9 @@ export default function StudentDashboard() {
               decks.map((d) => (
                 <DeckRow
                   key={d.id}
-                  deckId={d.id}
                   name={deckDisplayName(d, i18n.language)}
+                  cards={cardsByDeck.get(d.id) ?? []}
+                  loading={allLoading}
                   onOpen={async (cards) => setView({ kind: "mode-pick", deck: d, cards })}
                   onDelete={() => deleteDeck(d.id)}
                   onAddCards={(rows, onProgress) => addCardsToDeck(d.id, rows, onProgress)}
@@ -475,15 +489,23 @@ function StatPill({ label, value, tone }: { label: string; value: number; tone: 
   )
 }
 
+/** `cards` comes from the dashboard's already-loaded set (all decks at
+ *  once, in DashboardSectionProvider) rather than a per-row fetch. Each
+ *  row used to call useCards(deckId) itself, which meant N extra requests
+ *  and — because a row renders as "empty" until its own request lands —
+ *  buttons visibly flipping from the empty state to the real one, one row
+ *  at a time. */
 function DeckRow({
-  deckId,
   name,
+  cards,
+  loading,
   onOpen,
   onDelete,
   onAddCards,
 }: {
-  deckId: string
   name: string
+  cards: CardWithMarks[]
+  loading: boolean
   onOpen: (cards: CardWithMarks[]) => void
   onDelete: () => void
   onAddCards: (
@@ -492,14 +514,19 @@ function DeckRow({
   ) => Promise<{ error: string | null }>
 }) {
   const { t } = useTranslation()
-  const { cards } = useCards(deckId)
-  const isEmpty = cards.length === 0
+  const isEmpty = !loading && cards.length === 0
   return (
     <div className="flex items-center justify-between rounded-lg border p-3">
-      <button className="flex-1 text-left" onClick={() => onOpen(cards)} disabled={isEmpty}>
+      <button className="flex-1 text-left" onClick={() => onOpen(cards)} disabled={loading || isEmpty}>
         <div className="text-sm font-medium">{name}</div>
         <div className="text-xs text-muted-foreground">
-          {isEmpty ? t("dashboard.emptyDeckHint") : t("common.wordsCount", { count: formatCount(cards.length) })}
+          {loading ? (
+            <Skeleton className="h-3 w-20" />
+          ) : isEmpty ? (
+            t("dashboard.emptyDeckHint")
+          ) : (
+            t("common.wordsCount", { count: formatCount(cards.length) })
+          )}
         </div>
       </button>
       <div className="flex items-center gap-1">

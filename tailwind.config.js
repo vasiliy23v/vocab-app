@@ -66,10 +66,27 @@ export default {
           "0%": { transform: "rotateY(0deg)" },
           "100%": { transform: "rotateY(180deg)" },
         },
+        // Pixel-art sprite frames: hard cuts, no interpolation, so the
+        // two poses read as animation cels rather than a crossfade.
+        "sprite-frame-a": {
+          "0%, 49.9%": { opacity: "1" },
+          "50%, 100%": { opacity: "0" },
+        },
+        "sprite-frame-b": {
+          "0%, 49.9%": { opacity: "0" },
+          "50%, 100%": { opacity: "1" },
+        },
+        "sprite-bob": {
+          "0%, 49.9%": { transform: "translateY(0)" },
+          "50%, 100%": { transform: "translateY(-1px)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "sprite-frame-a": "sprite-frame-a 0.6s steps(1, end) infinite",
+        "sprite-frame-b": "sprite-frame-b 0.6s steps(1, end) infinite",
+        "sprite-bob": "sprite-bob 0.6s steps(1, end) infinite",
       },
     },
   },
