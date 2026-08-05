@@ -1,5 +1,6 @@
 import * as React from "react"
 import { supabase } from "@/lib/supabase"
+import { fetchAllRows } from "@/lib/fetchAllRows"
 import { effectiveMarkStatus } from "@/lib/cardStatus"
 import type { CardWithMarks, Deck } from "@/types/db"
 
@@ -45,17 +46,23 @@ export function useDashboardData(studentId: string | null): DashboardData {
             .eq("owner_id", studentId)
             .eq("is_template", false)
             .order("created_at", { ascending: false }),
-          supabase
-            .from("cards_with_marks")
-            .select("*")
-            .eq("owner_id", studentId)
-            .eq("deck_is_template", false)
-            .order("sort_order", { ascending: true }),
+          // Paged: past 1000 words the sidebar counts described only the
+          // first page, which is why they never matched the flame balance.
+          fetchAllRows<CardWithMarks>((from, to) =>
+            supabase
+              .from("cards_with_marks")
+              .select("*")
+              .eq("owner_id", studentId)
+              .eq("deck_is_template", false)
+              .order("sort_order", { ascending: true })
+              .order("id", { ascending: true })
+              .range(from, to)
+          ),
         ])
 
         const next: Snapshot = {
           decks: (decksRes.data as Deck[]) ?? [],
-          cards: (cardsRes.data as CardWithMarks[]) ?? [],
+          cards: cardsRes.data,
         }
         cache.set(studentId, next)
         setData(next)
@@ -91,14 +98,18 @@ export function useDashboardData(studentId: string | null): DashboardData {
         { event: "*", schema: "public", table: "decks", filter: `owner_id=eq.${studentId}` },
         () => load()
       )
+      // "*", not INSERT/UPDATE: a card being deleted, and — more often — a
+      // word being marked for the very first time (an INSERT into
+      // card_marks, since set_card_mark upserts) both change these counts,
+      // and neither used to reach the sidebar/bottom-nav badges.
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "cards" },
+        { event: "*", schema: "public", table: "cards" },
         () => load()
       )
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "card_marks" },
+        { event: "*", schema: "public", table: "card_marks" },
         () => load()
       )
       .subscribe()

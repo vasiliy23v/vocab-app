@@ -7,24 +7,26 @@ import type { CardWithMarks, Deck, MarkStatus } from "@/types/db"
 
 /**
  * Which "page" of the student dashboard is showing. Backed by the URL
- * (/, /review, /mastered, /table) rather than local state, so the
- * sidebar can render these as plain <Link>s with real active-route
- * highlighting and the browser back/forward buttons work — while the
- * data fetching below stays here in the provider (mounted once above
- * the route outlet), so switching sections never re-fetches.
+ * (/decks, /mastered, /table) rather than local state, so the sidebar can
+ * render these as plain <Link>s with real active-route highlighting and the
+ * browser back/forward buttons work — while the data fetching below stays
+ * here in the provider (mounted once above the route outlet), so switching
+ * sections never re-fetches.
+ *
+ * "review" and "mastered" used to be sections of their own at /review and
+ * /mastered. Each rendered a sentence and two buttons, while the level path
+ * that actually describes the course sat two clicks behind them. Everything
+ * studying-related now lives on /decks: the level path first, decks below.
+ * /table stays separate — it is a reference view, not a way to study.
  */
-export type DashboardSection = "decks" | "review" | "mastered" | "table"
+export type DashboardSection = "decks" | "table"
 
 const SECTION_PATHS: Record<DashboardSection, string> = {
-  decks: "/",
-  review: "/review",
-  mastered: "/mastered",
+  decks: "/decks",
   table: "/table",
 }
 
 function sectionFromPath(pathname: string): DashboardSection {
-  if (pathname === "/review") return "review"
-  if (pathname === "/mastered") return "mastered"
   if (pathname === "/table") return "table"
   return "decks"
 }

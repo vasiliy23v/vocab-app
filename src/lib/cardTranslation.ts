@@ -151,6 +151,11 @@ export function cardDescription(card: DescriptionTranslatable, language: string)
  * fallback pattern: `name` is whatever they typed, `name_en` is optional
  * and falls back to `name` when blank (e.g. decks created before this
  * field existed, or nobody bothered to add an English name).
+ *
+ * Unlike card content, deck names have no Ukrainian column — `name_uk`
+ * would need a migration plus a field in every place a deck is created
+ * (upload dialog, admin templates), so a Ukrainian UI shows deck names
+ * in whatever language they were typed in.
  */
 export interface NameTranslatable {
   name: string

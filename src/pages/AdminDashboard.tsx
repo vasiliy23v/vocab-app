@@ -190,7 +190,13 @@ function ContentPanel() {
   const { templates, loading, createTemplate, deleteTemplate, assignToStudents, renameTemplate } = useAdminTemplates(user?.id ?? null)
   const [exporting, setExporting] = React.useState(false)
 
-  const students = users.filter((u) => u.role === "user")
+  // Admins are not students, but they still want to assign a template to
+  // themselves — put themselves first in the list, marked as "you".
+  const students = React.useMemo(() => {
+    const rest = users.filter((u) => u.role === "user" && u.id !== user?.id)
+    const me = users.find((u) => u.id === user?.id)
+    return me ? [me, ...rest] : rest
+  }, [users, user?.id])
 
   const handleCreate = async (
     rows: ParsedCardRow[],
@@ -258,6 +264,7 @@ function ContentPanel() {
             key={deck.id}
             deck={deck}
             students={students}
+            currentUserId={user?.id ?? null}
             language={i18n.language}
             onAssign={assignToStudents}
             onDelete={() => deleteTemplate(deck.id)}
@@ -272,6 +279,7 @@ function ContentPanel() {
 function TemplateCard({
   deck,
   students,
+  currentUserId,
   language,
   onAssign,
   onDelete,
@@ -279,6 +287,7 @@ function TemplateCard({
 }: {
   deck: Deck
   students: AdminProfileRow[]
+  currentUserId: string | null
   language: string
   onAssign: (deckId: string, studentIds: string[]) => Promise<{ error: string | null }>
   onDelete: () => void
@@ -393,7 +402,11 @@ function TemplateCard({
               {students.map((s) => (
                 <label key={s.id} className="flex items-center gap-2.5 rounded-md border p-2.5 text-sm cursor-pointer hover:bg-muted/40">
                   <Checkbox checked={selected.has(s.id)} onCheckedChange={() => toggle(s.id)} />
-                  <span>{s.display_name || s.email}</span>
+                  <span>
+                    {s.id === currentUserId
+                      ? t("admin.selfOption", { name: s.display_name || s.email })
+                      : s.display_name || s.email}
+                  </span>
                 </label>
               ))}
             </div>
@@ -431,6 +444,7 @@ function TemplateCard({
 
 function VocabularyPanel() {
   const { t } = useTranslation()
+  const { user: currentUser } = useAuth()
   const { users } = useAdminUsers()
   const [selectedUserId, setSelectedUserId] = React.useState<string>("")
   const { decks, loading, createDeck, addCards } = useAdminUserDecks(selectedUserId || null)
@@ -445,6 +459,14 @@ function VocabularyPanel() {
       setSelectedDeckId(decks[0].id)
     }
   }, [decks, selectedDeckId])
+
+  // Admins are not in the student list, but they still need to load vocabulary
+  // into their own account — put themselves first, marked as "you".
+  const assignableUsers = React.useMemo(() => {
+    const students = users.filter((u) => u.role === "user" && u.id !== currentUser?.id)
+    const me = users.find((u) => u.id === currentUser?.id)
+    return me ? [me, ...students] : students
+  }, [users, currentUser?.id])
 
   const handleCreateDeck = async () => {
     if (!newDeckName.trim() || !selectedUserId) return
@@ -496,13 +518,13 @@ function VocabularyPanel() {
             }}
           >
             <option value="">{t("admin.chooseStudent")}</option>
-            {users
-              .filter((u) => u.role === "user")
-              .map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.display_name || u.email}
-                </option>
-              ))}
+            {assignableUsers.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.id === currentUser?.id
+                  ? t("admin.selfOption", { name: u.display_name || u.email })
+                  : u.display_name || u.email}
+              </option>
+            ))}
           </select>
         </div>
 

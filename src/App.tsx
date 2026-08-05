@@ -55,7 +55,7 @@ function RequireAuth() {
 
 function RequireAdmin({ children }: { children: React.ReactNode }) {
   const isSuperadmin = useIsSuperadmin()
-  if (!isSuperadmin) return <Navigate to="/" replace />
+  if (!isSuperadmin) return <Navigate to="/decks" replace />
   return <>{children}</>
 }
 
@@ -78,7 +78,7 @@ function AuthCallbackHandler() {
     if (!user || !callbackType) return
 
     handled.current = true
-    navigate(needsPasswordSetup(callbackType, authEvent) ? "/reset-password" : "/", { replace: true })
+    navigate(needsPasswordSetup(callbackType, authEvent) ? "/reset-password" : "/decks", { replace: true })
   }, [user, loading, authEvent, callbackType, callbackError, navigate])
 
   return null
@@ -153,9 +153,14 @@ function AppRoutes() {
         <Route path="/invite/:code" element={<InvitePage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route element={<RequireAuth />}>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/review" element={<HomePage />} />
-          <Route path="/mastered" element={<HomePage />} />
+          {/* /decks is the home page now. "/", the old /review and the old
+              /mastered all land there — both were merged into it, and
+              existing bookmarks (plus the installed PWA's start_url) still
+              point at "/". */}
+          <Route path="/" element={<Navigate to="/decks" replace />} />
+          <Route path="/review" element={<Navigate to="/decks" replace />} />
+          <Route path="/mastered" element={<Navigate to="/decks" replace />} />
+          <Route path="/decks" element={<HomePage />} />
           <Route path="/table" element={<HomePage />} />
           <Route path="/people" element={<PeoplePage />} />
           <Route path="/settings" element={<SettingsPage />} />
@@ -171,7 +176,7 @@ function AppRoutes() {
             }
           />
         </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/decks" replace />} />
       </Routes>
     </>
   )

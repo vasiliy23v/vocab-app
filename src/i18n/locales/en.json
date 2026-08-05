@@ -75,29 +75,20 @@
   },
   "dashboard": {
     "title": "My flashcards",
-    "review": "Review",
     "reviewDesc": "Unmarked words and words that still need practice.",
     "newWords": "New words",
-    "newWordsDesc": "Words you haven't marked yet — learn them for the first time.",
     "reviewWords": "Review",
-    "reviewWordsDesc": "Words marked \"unknown\" or \"repeat\" — by you or your teacher.",
     "cardsButton": "Flashcards ({{count}})",
     "quizButton": "Quiz",
-    "mastered": "Mastered",
-    "masteredDesc": "Words marked as \"known\" — by you while studying or by your teacher.",
     "wordTableHeading": "Word table",
     "allDecks": "All decks",
     "decksHeading": "Decks",
     "tabDecks": "Decks",
-    "tabReview": "Review",
-    "tabMastered": "Mastered",
     "tabTable": "Words",
     "noDecks": "No decks yet — upload your first one!",
     "emptyStateTitle": "Add your first deck to start learning",
     "emptyStateDesc": "Upload a list of words and start reviewing right away.",
-    "reviewEmpty": "Nothing to review right now — nice work!",
     "reviewEmptyNoCards": "No words yet — add some to a deck below to start reviewing.",
-    "masteredEmpty": "No mastered words yet — tap \"I know it!\" while studying.",
     "emptyDeckHint": "No words yet — add some to get started",
     "addFirstWords": "+ Add words",
     "backToDecks": "← Decks",
@@ -121,7 +112,9 @@
     "flipBack": "Tap again to flip back",
     "flipForward": "Tap the card to see the German word",
     "stillLearning": "↺ Still learning",
-    "know": "✓ I know it!"
+    "know": "✓ I know it!",
+    "studyModeLabel": "Mode:",
+    "masteredOf": "{{known}} of {{total}} mastered"
   },
   "study": {
     "exitTitle": "Leave this lesson?",
@@ -157,16 +150,16 @@
     "change": "change"
   },
   "quiz": {
-    "chooseTranslation": "Choose the translation",
+    "chooseTranslation": "Choose the {{language}} translation",
     "findSpelling": "Find the correct spelling",
-    "typeGerman": "Type it in German",
     "spellingHint": "One of these words is spelled correctly — which one?",
-    "typeinHint": "Type the German word or phrase",
-    "typeinPlaceholder": "German word…",
+    "typeinHint": "Type the {{language}} word or phrase",
+    "typeinPlaceholder": "{{language}} word…",
     "check": "Check",
     "correct": "Correct!",
     "correctAnswerIs": "Correct answer: {{word}}",
-    "next": "Next →"
+    "next": "Next →",
+    "typeTarget": "Write it in {{language}}"
   },
   "upload": {
     "uploadCards": "Upload cards",
@@ -177,8 +170,9 @@
     "deckNameEnPlaceholder": "falls back to the deck name above",
     "columnsLabel": "Columns:",
     "separatorHint": "Separator: Tab or comma. Tags separated by \";\"",
-    "translationColumnHint": "translation — Russian translation, translation_en — English (optional)",
-    "groupColumnHint": "group — topic name, group_en — English topic name (optional, falls back to group)",
+    "translationColumnHint": "translation — Russian translation, translation_en — English, translation_uk — Ukrainian (both optional)",
+    "groupColumnHint": "group — topic name, group_en / group_uk — translated topic name (optional, falls back to group)",
+    "ukAliasHint": "Ukrainian columns also accept the _ua suffix: translation_ua, group_ua, example_ua.",
     "tabFile": "File",
     "tabPaste": "Paste",
     "tabDemo": "Demo",
@@ -209,8 +203,8 @@
     "empty": "—"
   },
   "flashcard": {
-    "frontLabel": "Translate into German",
-    "backLabel": "German"
+    "frontLabel": "Translate into {{language}}",
+    "backLabel": "{{language}}"
   },
   "people": {
     "title": "Teachers & students",
@@ -263,10 +257,11 @@
     "uk": "Українська 🇺🇦"
   },
   "languagePair": {
-    "title": "Learning language pair",
-    "subtitle": "Choose which language you're learning from and to",
+    "title": "Language to learn",
+    "subtitle": "Choose which language you're learning",
     "from": "From",
     "to": "To",
+    "fromInterface": "Translated from your interface language: {{language}}",
     "save": "Save",
     "saving": "Saving…"
   },
@@ -317,24 +312,17 @@
   },
   "leaderboard": {
     "title": "Leaderboard",
-    "subtitle": "Top performers mastering German words",
-    "desc": "Show your name on the leaderboard and compete with others. Earn 🔥 flames for each word you master!",
-    "info": "Your progress will be visible to other users. You can change this in Settings anytime.",
-    "earnFlames": "How to earn flames:",
-    "flame1": "+1 flame for each word you mark as 'known'",
-    "flame2": "Flames track your total mastered words",
-    "joinNow": "Join Leaderboard",
-    "topPlayers": "Top Players",
-    "empty": "No one on the leaderboard yet",
-    "emptyHint": "Be the first to join and start earning flames!",
-    "you": "You",
-    "yourRank": "Your rank:",
-    "flames": "flames",
-    "howItWorks": "How it works:",
-    "info1": "Earn 1 flame for each word you master",
-    "info2": "Only appears on the leaderboard if you opted in",
-    "info3": "Updates in real-time as you learn",
-    "info4": "You can opt-out anytime in Settings"
+    "desc": "Show your name on the leaderboard and compete with others. You earn 🔥 for every word you master.",
+    "info": "Only your name and your flame count are shown. You can leave the leaderboard anytime in Settings.",
+    "joinNow": "Join the leaderboard",
+    "empty": "No one has earned a flame yet",
+    "standing": "#{{rank}} of {{total}}",
+    "unranked": "Not ranked yet",
+    "rulesTitle": "How flames are counted",
+    "rule1": "1 🔥 = 1 word currently marked as known.",
+    "rule2": "Each word counts once, however many times you review it.",
+    "rule3": "Un-mark or delete a word and its flame goes with it.",
+    "rule4": "If a teacher marked a word, their mark is the one that counts."
   },
   "admin": {
     "title": "Admin dashboard",
@@ -381,6 +369,7 @@
     "tabVocabulary": "Vocabulary",
     "selectStudent": "Select a student",
     "chooseStudent": "Choose a student…",
+    "selfOption": "{{name}} (you)",
     "selectDeck": "Select a deck",
     "chooseDeck": "Choose a deck…",
     "newDeck": "+ New deck",
@@ -392,5 +381,19 @@
     "cardsUpserted": "Added: {{added}}, updated: {{updated}}",
     "noDecksByStudent": "This student has no decks yet",
     "cards": "words"
+  },
+  "learnLang": {
+    "name": {
+      "de": "German",
+      "en": "English",
+      "ru": "Russian",
+      "uk": "Ukrainian"
+    },
+    "to": {
+      "de": "German",
+      "en": "English",
+      "ru": "Russian",
+      "uk": "Ukrainian"
+    }
   }
 }

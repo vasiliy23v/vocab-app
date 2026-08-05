@@ -154,6 +154,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [fetchProfile])
 
+  // The profile row is otherwise only read at sign-in, but flames_count is
+  // written server-side by the mark triggers — without this the flame
+  // balance in the menu and the shop stayed frozen at whatever it was when
+  // the session started, and only a full reload moved it.
+  React.useEffect(() => {
+    const userId = session?.user?.id
+    if (!userId) return
+
+    const channel = supabase
+      .channel(`profile_${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${userId}` },
+        (payload) => {
+          const row = payload.new as Profile
+          setProfile((prev) =>
+            prev ? { ...prev, ...row, vibrate_on_correct: row.vibrate_on_correct ?? true } : prev
+          )
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [session?.user?.id])
+
   const signUp = async (email: string, password: string, displayName: string) => {
     const { error } = await supabase.auth.signUp({
       email,

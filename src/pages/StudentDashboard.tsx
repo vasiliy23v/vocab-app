@@ -16,7 +16,8 @@ import { useStudyVibrate } from "@/hooks/useStudyVibrate"
 import { useStudyStreak } from "@/hooks/useStudyStreak"
 import { useDailyGoal } from "@/hooks/useDailyGoal"
 import { formatCount } from "@/lib/formatCount"
-import { isLevelCleared } from "@/lib/cardStatus"
+import { isLevelCleared, effectiveMarkStatus } from "@/lib/cardStatus"
+import { useLastDeck } from "@/hooks/useLastDeck"
 import { cardTranslation, cardDescription, deckName as deckDisplayName } from "@/lib/cardTranslation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -28,7 +29,7 @@ import {
 import type { CardWithMarks, Deck, MarkStatus } from "@/types/db"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { Vibrate, VibrateOff } from "lucide-react"
+import { CalendarCheck, Vibrate, VibrateOff } from "lucide-react"
 
 type View =
   | { kind: "deck-list" }
@@ -41,11 +42,14 @@ type View =
 export default function StudentDashboard() {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
-  const { decks, section, cards, newCards, reviewQueue, masteredCards, loading: allLoading, setOwnMark, setGoalDialogOpen } =
+  const { decks, section, cards, loading: allLoading, setOwnMark, setGoalDialogOpen } =
     useDashboardSection()
   const { streak, bump: bumpStreak } = useStudyStreak()
   const { wordsPerDay } = useDailyGoal()
   const [view, setView] = React.useState<View>({ kind: "deck-list" })
+  /** Flashcards or quiz, picked once above the level path instead of in a
+   *  separate mode-pick screen between the path and the session. */
+  const [studyMode, setStudyMode] = React.useState<"cards" | "quiz">("cards")
   const [activeDeckId, setActiveDeckId] = React.useState<string | null>(null)
   const [tableDeckId, setTableDeckId] = React.useState<string>("all")
   const [tableSearch, setTableSearch] = React.useState("")
@@ -82,6 +86,23 @@ export default function StudentDashboard() {
   }, [cards])
 
   const { addCards } = useCards(activeDeckId)
+
+  /** The deck whose course the level path shows. Remembered per account,
+   *  falling back to the first deck when the remembered one is gone. */
+  const deckIds = React.useMemo(() => decks.map((d) => d.id), [decks])
+  const { selectedDeckId, selectDeck } = useLastDeck(user?.id ?? null, deckIds)
+  const pathCards = React.useMemo(
+    () => (selectedDeckId ? (cardsByDeck.get(selectedDeckId) ?? []) : []),
+    [cardsByDeck, selectedDeckId]
+  )
+  const pathMastered = React.useMemo(
+    () => pathCards.filter((c) => effectiveMarkStatus(c) === "known"),
+    [pathCards]
+  )
+  const pathLabel = React.useMemo(() => {
+    const deck = decks.find((d) => d.id === selectedDeckId)
+    return deck ? deckDisplayName(deck, i18n.language) : t("dashboard.title")
+  }, [decks, selectedDeckId, i18n.language, t])
 
   // Clicking Review/Mastered/Word table/decks in the sidebar only updates
   // `section` (it lives above this component, in DashboardSectionProvider).
@@ -158,13 +179,9 @@ export default function StudentDashboard() {
     }
 
     const sectionTitle =
-      section === "review"
-        ? t("dashboard.review")
-        : section === "mastered"
-          ? t("dashboard.mastered")
-          : section === "table"
-            ? t("dashboard.wordTableHeading")
-            : t("dashboard.title")
+      section === "table" ? t("dashboard.wordTableHeading") : t("dashboard.title")
+
+    const levelSize = wordsPerDay ?? 20
 
     return (
       <div className="mx-auto max-w-4xl space-y-6">
@@ -173,91 +190,126 @@ export default function StudentDashboard() {
           <UploadDialog askDeckName onUpload={handleCreateDeckUpload} />
         </div>
 
+        {/* One screen, one path. Review and Mastered used to be separate
+            routes whose entire content was a pair of buttons, and the level
+            path — the actual shape of the course — was buried two clicks
+            deep behind them. It leads now: cleared levels stay open for
+            re-runs (they cost nothing to replay, since a flame counts a word
+            that is currently known, not a session), unfinished ones are
+            where new and half-learned words live, and the decks that hold
+            them sit underneath as management. */}
         {section === "decks" && (
-          <div className="space-y-2">
-            {decks.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("dashboard.noDecks")}</p>
+          <div className="space-y-8">
+            {allLoading ? (
+              <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+            ) : cards.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("dashboard.reviewEmptyNoCards")}</p>
             ) : (
-              decks.map((d) => (
-                <DeckRow
-                  key={d.id}
-                  name={deckDisplayName(d, i18n.language)}
-                  cards={cardsByDeck.get(d.id) ?? []}
-                  loading={allLoading}
-                  onOpen={async (cards) => setView({ kind: "mode-pick", deck: d, cards })}
-                  onDelete={() => deleteDeck(d.id)}
-                  onAddCards={(rows, onProgress) => addCardsToDeck(d.id, rows, onProgress)}
-                />
-              ))
-            )}
-          </div>
-        )}
+              <div className="space-y-4">
+                {/* The path is one deck's course, not the whole library:
+                    spanning every deck turned 4600 words into 231 levels in
+                    a single scroll, with no way to tell where one book ended
+                    and the next began. The choice is remembered, so coming
+                    back lands on what you were actually studying. */}
+                {decks.length > 1 && (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {decks.map((d) => (
+                      <DeckFilterButton
+                        key={d.id}
+                        active={d.id === selectedDeckId}
+                        onClick={() => selectDeck(d.id)}
+                        label={deckDisplayName(d, i18n.language)}
+                      />
+                    ))}
+                  </div>
+                )}
 
-        {section === "review" &&
-          (allLoading ? (
-            <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
-          ) : newCards.length === 0 && reviewQueue.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {cards.length === 0 ? t("dashboard.reviewEmptyNoCards") : t("dashboard.reviewEmpty")}
-            </p>
-          ) : (
-            <div className="space-y-6">
-              {newCards.length > 0 && (
-                <div className="space-y-3">
-                  <div>
-                    <h2 className="text-sm font-medium">{t("dashboard.newWords")}</h2>
-                    <p className="text-sm text-muted-foreground">{t("dashboard.newWordsDesc")}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button onClick={() => goToStudySetup("cards", cards, t("dashboard.newWords"))}>
-                      {t("dashboard.cardsButton", { count: formatCount(newCards.length) })}
-                    </Button>
-                    <Button variant="outline" onClick={() => goToStudySetup("quiz", cards, t("dashboard.newWords"))}>
-                      {t("dashboard.quizButton")}
-                    </Button>
-                  </div>
-                </div>
-              )}
-              {reviewQueue.length > 0 && (
-                <div className="space-y-3">
-                  <div>
-                    <h2 className="text-sm font-medium">{t("dashboard.reviewWords")}</h2>
-                    <p className="text-sm text-muted-foreground">{t("dashboard.reviewWordsDesc")}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button onClick={() => goToStudySetup("cards", reviewQueue, t("dashboard.reviewWords"))}>
-                      {t("dashboard.cardsButton", { count: formatCount(reviewQueue.length) })}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => goToStudySetup("quiz", reviewQueue, t("dashboard.reviewWords"))}
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs text-muted-foreground">{t("dashboard.studyModeLabel")}</span>
+                  {(["cards", "quiz"] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setStudyMode(m)}
+                      className={cn(
+                        "rounded-full border px-3 py-1 text-xs transition-colors",
+                        studyMode === m
+                          ? "border-foreground bg-foreground text-background"
+                          : "text-muted-foreground hover:border-foreground/40"
+                      )}
                     >
-                      {t("dashboard.quizButton")}
-                    </Button>
-                  </div>
+                      {m === "cards" ? t("dashboard.modeCardsTitle") : t("dashboard.modeQuizTitle")}
+                    </button>
+                  ))}
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {t("dashboard.masteredOf", {
+                      known: formatCount(pathMastered.length),
+                      total: formatCount(pathCards.length),
+                    })}
+                  </span>
                 </div>
-              )}
-            </div>
-          ))}
 
-        {section === "mastered" &&
-          (allLoading ? (
-            <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
-          ) : masteredCards.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("dashboard.masteredEmpty")}</p>
-          ) : (
+                {pathCards.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">{t("dashboard.emptyDeckHint")}</p>
+                ) : (
+                <LevelPicker
+                  /* Remount on deck change: LevelPicker measures the current
+                     row to place the warrior sprite, and reusing the instance
+                     left it parked on the previous deck's offset. */
+                  key={selectedDeckId ?? "none"}
+                  items={pathCards}
+                  levelSize={levelSize}
+                  isLevelComplete={isLevelCleared}
+                  renderSizeControl={() => (
+                    <span className="text-xs text-muted-foreground">
+                      {t("dailyGoal.perLevel", { n: levelSize })} ·{" "}
+                      <button
+                        type="button"
+                        onClick={() => setGoalDialogOpen(true)}
+                        className="underline underline-offset-2 hover:text-foreground"
+                      >
+                        {t("dailyGoal.change")}
+                      </button>
+                    </span>
+                  )}
+                  onSelectLevel={(lvl, i) =>
+                    setView({
+                      kind: "study",
+                      mode: studyMode,
+                      cards: lvl,
+                      label: t("levelPicker.levelLabel", { n: i + 1 }),
+                    })
+                  }
+                  onSelectAll={() =>
+                    setView({ kind: "study", mode: studyMode, cards: pathCards, label: pathLabel })
+                  }
+                />
+                )}
+              </div>
+            )}
+
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">{t("dashboard.masteredDesc")}</p>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => goToStudySetup("cards", masteredCards, t("dashboard.mastered"))}>
-                  {t("dashboard.cardsButton", { count: formatCount(masteredCards.length) })}
-                </Button>
-                <Button variant="outline" onClick={() => goToStudySetup("quiz", masteredCards, t("dashboard.mastered"))}>
-                  {t("dashboard.quizButton")}
-                </Button>
+              <h2 className="text-sm font-medium">{t("dashboard.decksHeading")}</h2>
+              <div className="space-y-2">
+                {decks.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">{t("dashboard.noDecks")}</p>
+                ) : (
+                  decks.map((d) => (
+                    <DeckRow
+                      key={d.id}
+                      name={deckDisplayName(d, i18n.language)}
+                      cards={cardsByDeck.get(d.id) ?? []}
+                      loading={allLoading}
+                      onOpen={async (cards) => setView({ kind: "mode-pick", deck: d, cards })}
+                      onDelete={() => deleteDeck(d.id)}
+                      onAddCards={(rows, onProgress) => addCardsToDeck(d.id, rows, onProgress)}
+                    />
+                  ))
+                )}
               </div>
             </div>
-          ))}
+          </div>
+        )}
 
         {section === "table" && (
           <div className="space-y-3">
@@ -423,9 +475,11 @@ export default function StudentDashboard() {
             <StatPill label={t("stats.learning")} value={hadMistakes} tone="destructive" />
           )}
         </div>
+        {/* Emerald + calendar, matching the sidebar badge — the flame is the
+            shop balance's icon and only its icon. */}
         {streak > 0 && (
-          <div className="mx-auto flex w-fit items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-1.5 text-sm font-medium text-orange-700 dark:border-orange-900 dark:bg-orange-950 dark:text-orange-300">
-            <span>🔥</span>
+          <div className="mx-auto flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-sm font-medium text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
+            <CalendarCheck className="h-4 w-4" aria-hidden />
             <span>{t("study.streakDays", { count: streak })}</span>
           </div>
         )}

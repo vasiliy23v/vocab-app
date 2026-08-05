@@ -75,29 +75,20 @@
   },
   "dashboard": {
     "title": "Meine Karteikarten",
-    "review": "Wiederholung",
     "reviewDesc": "Markierte und noch zu wiederholende Wörter.",
     "newWords": "Neue Wörter",
-    "newWordsDesc": "Wörter, die Sie noch nicht markiert haben — lernen Sie sie zum ersten Mal.",
     "reviewWords": "Wiederholen",
-    "reviewWordsDesc": "Wörter, die als 'unbekannt' oder 'wiederholen' markiert sind — von Ihnen oder Ihrem Lehrer.",
     "cardsButton": "Karteikarten ({{count}})",
     "quizButton": "Quiz",
-    "mastered": "Beherrscht",
-    "masteredDesc": "Wörter, die als 'bekannt' markiert sind — von Ihnen beim Lernen oder von Ihrem Lehrer.",
     "wordTableHeading": "Wörterliste",
     "allDecks": "Alle Decks",
     "tabDecks": "Decks",
-    "tabReview": "Üben",
-    "tabMastered": "Gelernt",
     "tabTable": "Wörter",
     "decksHeading": "Karteikasten-Decks",
     "noDecks": "Noch keine Decks — laden Sie Ihr erstes hoch!",
     "emptyStateTitle": "Fügen Sie Ihr erstes Deck hinzu, um zu beginnen",
     "emptyStateDesc": "Laden Sie eine Wörterliste hoch und beginnen Sie sofort mit der Wiederholung.",
-    "reviewEmpty": "Im Moment ist nichts zu wiederholen — großartig!",
     "reviewEmptyNoCards": "Noch keine Wörter — fügen Sie welche unten hinzu, um zu beginnen.",
-    "masteredEmpty": "Noch keine beherrschten Wörter — klicken Sie auf 'Ich kenne es!' beim Lernen.",
     "emptyDeckHint": "Noch keine Wörter — fügen Sie welche hinzu, um zu beginnen",
     "addFirstWords": "+ Wörter hinzufügen",
     "backToDecks": "← Decks",
@@ -121,7 +112,9 @@
     "flipBack": "Klicken Sie erneut zum Umblättern",
     "flipForward": "Tippen Sie auf die Karteikarte, um das deutsche Wort zu sehen",
     "stillLearning": "↺ Lerne noch",
-    "know": "✓ Ich kenne es!"
+    "know": "✓ Ich kenne es!",
+    "studyModeLabel": "Modus:",
+    "masteredOf": "{{known}} von {{total}} gelernt"
   },
   "study": {
     "exitTitle": "Diese Lektion verlassen?",
@@ -157,16 +150,16 @@
     "change": "ändern"
   },
   "quiz": {
-    "chooseTranslation": "Wählen Sie die Übersetzung",
+    "chooseTranslation": "Wähle die Übersetzung auf {{language}}",
     "findSpelling": "Finden Sie die richtige Schreibweise",
-    "typeGerman": "Geben Sie es auf Deutsch ein",
     "spellingHint": "Eines dieser Wörter ist richtig geschrieben — welches?",
-    "typeinHint": "Geben Sie das deutsche Wort oder die Phrase ein",
-    "typeinPlaceholder": "Deutsches Wort...",
+    "typeinHint": "Gib das Wort oder die Phrase auf {{language}} ein",
+    "typeinPlaceholder": "Wort auf {{language}}…",
     "check": "Überprüfen",
     "correct": "Richtig!",
     "correctAnswerIs": "Richtige Antwort: {{word}}",
-    "next": "Weiter →"
+    "next": "Weiter →",
+    "typeTarget": "Schreibe es auf {{language}}"
   },
   "upload": {
     "uploadCards": "Karteikarten hochladen",
@@ -177,8 +170,9 @@
     "deckNameEnPlaceholder": "fällt auf den obigen Deck-Namen zurück",
     "columnsLabel": "Spalten:",
     "separatorHint": "Trennzeichen: Tab oder Komma. Tags durch ; getrennt",
-    "translationColumnHint": "translation — deutsche Übersetzung, translation_en — Englisch (optional)",
-    "groupColumnHint": "group — Themenname, group_en — englischer Themenname (optional, fällt auf group zurück)",
+    "translationColumnHint": "translation — russische Übersetzung, translation_en — Englisch, translation_uk — Ukrainisch (beide optional)",
+    "groupColumnHint": "group — Themenname, group_en / group_uk — übersetzter Themenname (optional, fällt auf group zurück)",
+    "ukAliasHint": "Ukrainische Spalten akzeptieren auch das Suffix _ua: translation_ua, group_ua, example_ua.",
     "tabFile": "Datei",
     "tabPaste": "Einfügen",
     "tabDemo": "Demo",
@@ -209,8 +203,8 @@
     "empty": "—"
   },
   "flashcard": {
-    "frontLabel": "Ins Deutsche übersetzen",
-    "backLabel": "Deutsch"
+    "frontLabel": "Übersetze ins {{language}}",
+    "backLabel": "{{language}}"
   },
   "people": {
     "title": "Lehrer & Schüler",
@@ -263,10 +257,11 @@
     "uk": "Українська 🇺🇦"
   },
   "languagePair": {
-    "title": "Sprachenpaar",
-    "subtitle": "Wählen Sie, von welcher Sprache zur anderen Sie lernen",
+    "title": "Sprache zum Lernen",
+    "subtitle": "Wählen Sie, welche Sprache Sie lernen",
     "from": "Von",
     "to": "Zu",
+    "fromInterface": "Übersetzt aus Ihrer Oberflächensprache: {{language}}",
     "save": "Speichern",
     "saving": "Wird gespeichert..."
   },
@@ -317,24 +312,17 @@
   },
   "leaderboard": {
     "title": "Bestenliste",
-    "subtitle": "Top-Performer die Deutsch lernen",
-    "desc": "Zeige deinen Namen in der Bestenliste an und konkurriere mit anderen. Verdiene 🔥 Flammen für jedes gelernte Wort!",
-    "info": "Dein Fortschritt ist für andere Benutzer sichtbar. Du kannst dies in den Einstellungen jederzeit ändern.",
-    "earnFlames": "Flammen verdienen:",
-    "flame1": "+1 Flamme für jedes Wort, das du als \"bekannt\" markierst",
-    "flame2": "Flammen verfolgen deine Gesamtzahl beherrschter Wörter",
+    "desc": "Zeige deinen Namen in der Bestenliste und miss dich mit anderen. Für jedes gelernte Wort bekommst du 🔥.",
+    "info": "Sichtbar sind nur dein Name und deine Flammen. Du kannst die Bestenliste jederzeit in den Einstellungen verlassen.",
     "joinNow": "Bestenliste beitreten",
-    "topPlayers": "Top-Spieler",
-    "empty": "Noch niemand in der Bestenliste",
-    "emptyHint": "Sei der Erste, der beitritt, und verdiene Flammen!",
-    "you": "Du",
-    "yourRank": "Dein Rang:",
-    "flames": "Flammen",
-    "howItWorks": "So funktioniert es:",
-    "info1": "Verdiene 1 Flamme für jedes gelernte Wort",
-    "info2": "Erscheint nur in der Bestenliste, wenn du zugestimmt hast",
-    "info3": "Aktualisiert sich in Echtzeit während du lernst",
-    "info4": "Du kannst dich jederzeit in den Einstellungen abmelden"
+    "empty": "Noch hat niemand eine Flamme verdient",
+    "standing": "#{{rank}} von {{total}}",
+    "unranked": "Noch nicht platziert",
+    "rulesTitle": "So werden Flammen gezählt",
+    "rule1": "1 🔥 = 1 Wort, das gerade als „bekannt“ markiert ist.",
+    "rule2": "Jedes Wort zählt einmal, egal wie oft du es wiederholst.",
+    "rule3": "Markierung entfernt oder Wort gelöscht — die Flamme geht mit.",
+    "rule4": "Hat eine Lehrkraft das Wort markiert, zählt deren Markierung."
   },
   "admin": {
     "title": "Admin-Dashboard",
@@ -381,6 +369,7 @@
     "tabVocabulary": "Vokabeln",
     "selectStudent": "Wählen Sie einen Schüler",
     "chooseStudent": "Wählen Sie einen Schüler...",
+    "selfOption": "{{name}} (Sie)",
     "selectDeck": "Wählen Sie ein Deck",
     "chooseDeck": "Wählen Sie ein Deck...",
     "newDeck": "+ Neues Deck",
@@ -392,5 +381,19 @@
     "cardsUpserted": "Hinzugefügt: {{added}}, aktualisiert: {{updated}}",
     "noDecksByStudent": "Dieser Schüler hat noch keine Decks",
     "cards": "Wörter"
+  },
+  "learnLang": {
+    "name": {
+      "de": "Deutsch",
+      "en": "Englisch",
+      "ru": "Russisch",
+      "uk": "Ukrainisch"
+    },
+    "to": {
+      "de": "Deutsch",
+      "en": "Englisch",
+      "ru": "Russisch",
+      "uk": "Ukrainisch"
+    }
   }
 }

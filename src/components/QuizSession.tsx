@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { buildQuizQuestion, checkTypedAnswer, mainWord } from "@/lib/quizEngine"
-import { cardTranslation, getCardBack } from "@/lib/cardTranslation"
+import { getCardFront, getCardBack } from "@/lib/cardTranslation"
+import { languageName } from "@/lib/languageLabel"
 import { StudyProgressBar, useProgressFlash } from "@/components/StudyProgressBar"
 import { ExitStudyDialog } from "@/components/ExitStudyDialog"
 import { useStudyVibrate } from "@/hooks/useStudyVibrate"
@@ -25,9 +26,11 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 export function QuizSession({ cards, onFinish, onExit, onMark }: QuizSessionProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const { profile } = useAuth()
+  const languageFrom = profile?.language_from || "en"
   const languageTo = profile?.language_to || "de"
+  const toName = languageName(t, languageTo, "to")
 
   const initialTotal = cards.length
   const [queue, setQueue] = React.useState(() => shuffle(cards))
@@ -102,10 +105,10 @@ export function QuizSession({ cards, onFinish, onExit, onMark }: QuizSessionProp
 
   const typeLabel =
     question.type === "multi"
-      ? t("quiz.chooseTranslation")
+      ? t("quiz.chooseTranslation", { language: toName })
       : question.type === "spelling"
         ? t("quiz.findSpelling")
-        : t("quiz.typeGerman")
+        : t("quiz.typeTarget", { language: toName })
 
   return (
     <div className="mx-auto max-w-md space-y-4">
@@ -138,12 +141,16 @@ export function QuizSession({ cards, onFinish, onExit, onMark }: QuizSessionProp
 
       <div className="flex min-h-[140px] flex-col items-center justify-center rounded-xl border p-7 text-center">
         <div className="mb-3 text-[10px] uppercase tracking-wide text-muted-foreground">{typeLabel}</div>
-        <div className="text-xl font-medium">{cardTranslation(question.card, i18n.language)}</div>
+        {/* The prompt is the word in the language you already know — the
+            pair's "from" side, same as the flashcard front. It used to be
+            keyed off the interface language, so an en→ru student with a
+            Russian UI was shown the answer as the question. */}
+        <div className="text-xl font-medium">{getCardFront(question.card, languageFrom)}</div>
         {question.type === "spelling" && (
           <div className="mt-2 text-xs text-muted-foreground">{t("quiz.spellingHint")}</div>
         )}
         {question.type === "typein" && (
-          <div className="mt-2 text-xs text-muted-foreground">{t("quiz.typeinHint")}</div>
+          <div className="mt-2 text-xs text-muted-foreground">{t("quiz.typeinHint", { language: toName })}</div>
         )}
       </div>
 

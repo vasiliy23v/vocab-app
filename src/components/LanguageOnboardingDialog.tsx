@@ -2,6 +2,7 @@ import * as React from "react"
 import { useTranslation } from "react-i18next"
 import type { Language } from "@/types/db"
 import { SUPPORTED_LANGUAGES } from "@/i18n"
+import { languageName } from "@/lib/languageLabel"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -25,10 +26,18 @@ interface LanguageOnboardingDialogProps {
 }
 
 export function LanguageOnboardingDialog({ open, onComplete }: LanguageOnboardingDialogProps) {
-  const { t } = useTranslation()
-  const [from, setFrom] = React.useState<Language>("en")
-  const [to, setTo] = React.useState<Language>("de")
+  const { t, i18n } = useTranslation()
+  // Source language is not asked for — it follows the interface language.
+  const from = (i18n.language?.split("-")[0] || "en") as Language
+  const [to, setTo] = React.useState<Language>(from === "de" ? "en" : "de")
   const [isSaving, setIsSaving] = React.useState(false)
+
+  React.useEffect(() => {
+    if (to === from) {
+      const next = SUPPORTED_LANGUAGES.find((lang) => lang !== from)
+      if (next) setTo(next as Language)
+    }
+  }, [from, to])
 
   const getLanguageName = (code: Language) => {
     switch (code) {
@@ -63,42 +72,22 @@ export function LanguageOnboardingDialog({ open, onComplete }: LanguageOnboardin
           <AlertDialogDescription>{t("languagePair.subtitle")}</AlertDialogDescription>
         </AlertDialogHeader>
 
-        <div className="space-y-4 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex-1">
-              <div className="mb-2 text-sm font-medium text-foreground">{t("languagePair.from")}</div>
-              <Select value={from} onValueChange={(value) => setFrom(value as Language)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SUPPORTED_LANGUAGES.filter((lang) => lang !== to).map((lang) => (
-                    <SelectItem key={lang} value={lang}>
-                      {getLanguageName(lang as Language)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="pt-6 text-sm text-muted-foreground">→</div>
-
-            <div className="flex-1">
-              <div className="mb-2 text-sm font-medium text-foreground">{t("languagePair.to")}</div>
-              <Select value={to} onValueChange={(value) => setTo(value as Language)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SUPPORTED_LANGUAGES.filter((lang) => lang !== from).map((lang) => (
-                    <SelectItem key={lang} value={lang}>
-                      {getLanguageName(lang as Language)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+        <div className="space-y-2 py-4">
+          <Select value={to} onValueChange={(value) => setTo(value as Language)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SUPPORTED_LANGUAGES.filter((lang) => lang !== from).map((lang) => (
+                <SelectItem key={lang} value={lang}>
+                  {getLanguageName(lang as Language)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            {t("languagePair.fromInterface", { language: languageName(t, from) })}
+          </p>
         </div>
 
         <AlertDialogFooter>

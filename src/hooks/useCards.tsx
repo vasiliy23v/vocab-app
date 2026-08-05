@@ -1,6 +1,7 @@
 import * as React from "react"
 import { supabase } from "@/lib/supabase"
 import { insertInBatches } from "@/lib/batchInsert"
+import { fetchAllRows } from "@/lib/fetchAllRows"
 import { effectiveMarkStatus } from "@/lib/cardStatus"
 import type { CardWithMarks, Deck, MarkStatus, ParsedCardRow } from "@/types/db"
 
@@ -78,16 +79,21 @@ export function useCards(deckId: string | null) {
       return
     }
     setLoading(true)
-    const { data, error } = await supabase
-      .from("cards_with_marks")
-      .select("*")
-      .eq("deck_id", deckId)
-      .order("sort_order", { ascending: true })
+    // Paged — a single deck can hold more than PostgREST's 1000-row cap.
+    const { data, error } = await fetchAllRows<CardWithMarks>((from, to) =>
+      supabase
+        .from("cards_with_marks")
+        .select("*")
+        .eq("deck_id", deckId)
+        .order("sort_order", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to)
+    )
     if (error) {
       // eslint-disable-next-line no-console
       console.error(error)
     }
-    setCards((data as CardWithMarks[]) ?? [])
+    setCards(data)
     setLoading(false)
   }, [deckId])
 
@@ -109,7 +115,7 @@ export function useCards(deckId: string | null) {
       )
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "card_marks" },
+        { event: "*", schema: "public", table: "card_marks" },
         reloadHandler
       )
       .subscribe()
@@ -206,17 +212,21 @@ export function useAllStudentCards(studentId: string | null) {
       return
     }
     setLoading(true)
-    const { data, error } = await supabase
-      .from("cards_with_marks")
-      .select("*")
-      .eq("owner_id", studentId)
-      .eq("deck_is_template", false)
-      .order("sort_order", { ascending: true })
+    const { data, error } = await fetchAllRows<CardWithMarks>((from, to) =>
+      supabase
+        .from("cards_with_marks")
+        .select("*")
+        .eq("owner_id", studentId)
+        .eq("deck_is_template", false)
+        .order("sort_order", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to)
+    )
     if (error) {
       // eslint-disable-next-line no-console
       console.error(error)
     }
-    setCards((data as CardWithMarks[]) ?? [])
+    setCards(data)
     setLoading(false)
   }, [studentId])
 
@@ -231,8 +241,8 @@ export function useAllStudentCards(studentId: string | null) {
     }
     const channel = supabase
       .channel(`all_cards_${studentId}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "cards" }, reloadHandler)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "card_marks" }, reloadHandler)
+      .on("postgres_changes", { event: "*", schema: "public", table: "cards" }, reloadHandler)
+      .on("postgres_changes", { event: "*", schema: "public", table: "card_marks" }, reloadHandler)
       .subscribe()
     return () => {
       supabase.removeChannel(channel)

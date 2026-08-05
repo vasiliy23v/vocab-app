@@ -13,10 +13,13 @@ import type { ParsedCardRow } from "@/types/db"
 import { toast } from "sonner"
 import { Upload } from "lucide-react"
 
-const DEMO_TSV = `word\ttranslation\ttranslation_en\tgroup\ttags\tdescription\texample_de\texample_ru
-das Erlebnis, -se\tпереживание, событие\texperience, event\tB1.1\tnoun;experience\tСущ. ср. рода, мн.ч. с -se\tManfred erzählt von seinem Glückserlebnis.\tМанфред рассказывает о своём счастливом событии.
-der Artikel, -\tстатья\tarticle\tB1.1\tnoun;media\tСущ. муж. рода, мн.ч. без окончания\tEllas Artikel wird pünktlich fertig.\tСтатья Эллы будет готова вовремя.
-weg sein (ist weg gewesen)\tпропасть, исчезнуть\tto be gone, to disappear\tB1.1\tverb;state\tГлагол — отсутствовать или исчезнуть\tSo lange, bis viel Geld weg war.\tДо тех пор, пока не пропало много денег.`
+// Doubles as documentation: whatever columns this sample carries are the
+// ones people copy. It shows the Ukrainian pair alongside the English one
+// so both read as equally supported.
+const DEMO_TSV = `word\ttranslation\ttranslation_en\ttranslation_uk\tgroup\ttags\tdescription\texample_de\texample_ru\texample_uk
+das Erlebnis, -se\tпереживание, событие\texperience, event\tпереживання, подія\tB1.1\tnoun;experience\tСущ. ср. рода, мн.ч. с -se\tManfred erzählt von seinem Glückserlebnis.\tМанфред рассказывает о своём счастливом событии.\tМанфред розповідає про свою щасливу подію.
+der Artikel, -\tстатья\tarticle\tстаття\tB1.1\tnoun;media\tСущ. муж. рода, мн.ч. без окончания\tEllas Artikel wird pünktlich fertig.\tСтатья Эллы будет готова вовремя.\tСтаття Елли буде готова вчасно.
+weg sein (ist weg gewesen)\tпропасть, исчезнуть\tto be gone, to disappear\tзникнути, пропасти\tB1.1\tverb;state\tГлагол — отсутствовать или исчезнуть\tSo lange, bis viel Geld weg war.\tДо тех пор, пока не пропало много денег.\tДо того часу, поки не зникло багато грошей.`
 
 interface UploadDialogProps {
   onUpload: (
@@ -148,16 +151,23 @@ export function UploadDialog({ onUpload, trigger, askDeckName }: UploadDialogPro
             <Badge variant="success" className="text-[10px]">word</Badge>
             <Badge variant="success" className="text-[10px]">translation</Badge>
             <Badge variant="outline" className="text-[10px]">translation_en</Badge>
+            <Badge variant="outline" className="text-[10px]">translation_uk</Badge>
             <Badge variant="outline" className="text-[10px]">group</Badge>
             <Badge variant="outline" className="text-[10px]">group_en</Badge>
+            <Badge variant="outline" className="text-[10px]">group_uk</Badge>
             <Badge variant="outline" className="text-[10px]">tags</Badge>
             <Badge variant="outline" className="text-[10px]">description</Badge>
+            <Badge variant="outline" className="text-[10px]">description_en</Badge>
+            <Badge variant="outline" className="text-[10px]">description_uk</Badge>
             <Badge variant="outline" className="text-[10px]">example_de</Badge>
             <Badge variant="outline" className="text-[10px]">example_ru</Badge>
+            <Badge variant="outline" className="text-[10px]">example_en</Badge>
+            <Badge variant="outline" className="text-[10px]">example_uk</Badge>
           </div>
           <p className="text-muted-foreground">{t("upload.separatorHint")}</p>
           <p className="text-muted-foreground">{t("upload.translationColumnHint")}</p>
           <p className="text-muted-foreground">{t("upload.groupColumnHint")}</p>
+          <p className="text-muted-foreground">{t("upload.ukAliasHint")}</p>
         </div>
 
         <Tabs defaultValue="file">

@@ -14,23 +14,44 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
-import { BookOpen, Users, ShieldCheck, LogOut, Menu, Settings, Flame, RotateCcw, CheckCircle2, Table2, ShoppingBag } from "lucide-react"
+import { BookOpen, Users, ShieldCheck, LogOut, Menu, Settings, Flame, Table2, ShoppingBag, CalendarCheck } from "lucide-react"
 
 function initials(name: string | null | undefined, email: string | undefined) {
   const base = name || email || "?"
   return base.slice(0, 2).toUpperCase()
 }
 
+/** Streak and flames are two unrelated numbers — days in a row vs. words
+ *  mastered — and both used to be drawn with a 🔥, one in the menu and one
+ *  on the leaderboard/shop, which read as the same counter disagreeing with
+ *  itself. The flame now belongs to the balance alone; the streak gets the
+ *  calendar it always meant. */
 function StreakBadge({ streak }: { streak: number }) {
   const { t } = useTranslation()
   return (
     <span
       title={t("study.streakDays", { count: streak })}
-      className="flex shrink-0 items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-700 dark:border-orange-900 dark:bg-orange-950 dark:text-orange-300"
+      className="flex shrink-0 items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300"
     >
-      <span aria-hidden>🔥</span>
+      <CalendarCheck className="h-3 w-3" aria-hidden />
       {streak}
     </span>
+  )
+}
+
+/** The flame balance, live from the profile row. Links to the shop, since
+ *  that is the only thing flames are for. */
+function FlamesBadge({ flames }: { flames: number }) {
+  const { t } = useTranslation()
+  return (
+    <Link
+      to="/shop"
+      title={t("shop.balanceHint")}
+      className="flex shrink-0 items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-700 transition-colors hover:bg-orange-100 dark:border-orange-900 dark:bg-orange-950 dark:text-orange-300 dark:hover:bg-orange-900"
+    >
+      <Flame className="h-3 w-3" aria-hidden />
+      {formatCount(flames)}
+    </Link>
   )
 }
 
@@ -46,7 +67,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation()
   const location = useLocation()
   const isSuperadmin = useIsSuperadmin()
-  const { newCards, reviewQueue, masteredCards, loading } = useDashboardSection()
+  const { newCards, reviewQueue, loading } = useDashboardSection()
   const toLearnCount = newCards.length + reviewQueue.length
 
   const items: {
@@ -56,20 +77,15 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
     count?: string
     tone?: "destructive" | "success"
   }[] = [
-    { to: "/", label: t("dashboard.title"), icon: BookOpen },
+    // Decks, Review and Mastered are one entry: /decks is the level path
+    // plus the deck list, so the badge that used to sit on Review belongs
+    // here and Mastered has no page left to point at.
     {
-      to: "/review",
-      label: t("dashboard.review"),
-      icon: RotateCcw,
+      to: "/decks",
+      label: t("dashboard.title"),
+      icon: BookOpen,
       count: !loading && toLearnCount > 0 ? formatCount(toLearnCount) : undefined,
       tone: "destructive",
-    },
-    {
-      to: "/mastered",
-      label: t("dashboard.mastered"),
-      icon: CheckCircle2,
-      count: !loading && masteredCards.length > 0 ? formatCount(masteredCards.length) : undefined,
-      tone: "success",
     },
     { to: "/table", label: t("dashboard.wordTableHeading"), icon: Table2 },
     { to: "/shop", label: t("shop.title"), icon: ShoppingBag },
@@ -119,7 +135,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 function BottomNav() {
   const { t } = useTranslation()
   const location = useLocation()
-  const { newCards, reviewQueue, masteredCards, loading } = useDashboardSection()
+  const { newCards, reviewQueue, loading } = useDashboardSection()
   const toLearnCount = newCards.length + reviewQueue.length
 
   const items: {
@@ -129,20 +145,12 @@ function BottomNav() {
     count?: string
     tone?: "destructive" | "success"
   }[] = [
-    { to: "/", label: t("dashboard.tabDecks"), icon: BookOpen },
     {
-      to: "/review",
-      label: t("dashboard.tabReview"),
-      icon: RotateCcw,
+      to: "/decks",
+      label: t("dashboard.tabDecks"),
+      icon: BookOpen,
       count: !loading && toLearnCount > 0 ? formatCount(toLearnCount) : undefined,
       tone: "destructive",
-    },
-    {
-      to: "/mastered",
-      label: t("dashboard.tabMastered"),
-      icon: CheckCircle2,
-      count: !loading && masteredCards.length > 0 ? formatCount(masteredCards.length) : undefined,
-      tone: "success",
     },
     { to: "/table", label: t("dashboard.tabTable"), icon: Table2 },
     { to: "/shop", label: t("shop.tabShop"), icon: ShoppingBag },
@@ -153,7 +161,7 @@ function BottomNav() {
       className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <div className="grid grid-cols-5">
+      <div className="grid grid-cols-3">
         {items.map((item) => {
           const active = location.pathname === item.to
           const Icon = item.icon
@@ -206,6 +214,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = React.useState(false)
   const isSuperadmin = useIsSuperadmin()
   const { streak } = useStudyStreak()
+  const flames = profile?.flames_count ?? 0
   const { wordsPerDay } = useDailyGoal()
   const { goalDialogOpen, setGoalDialogOpen } = useDashboardSection()
   // Only show daily goal dialog if user explicitly opened it from settings
@@ -264,10 +273,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <aside className="hidden shrink-0 border-r p-4 md:flex md:w-60 md:flex-col">
         <div className="flex h-full flex-col">
           <div className="mb-5 flex items-center justify-between gap-2 px-1">
-            <Link to="/" className="block font-semibold text-sm tracking-tight">
+            <Link to="/decks" className="truncate font-semibold text-sm tracking-tight">
               {t("appName")}
             </Link>
-            {streak > 0 && <StreakBadge streak={streak} />}
+            <div className="flex shrink-0 items-center gap-1">
+              {streak > 0 && <StreakBadge streak={streak} />}
+              <FlamesBadge flames={flames} />
+            </div>
           </div>
           {sidebarNav}
         </div>
@@ -285,15 +297,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </SheetTrigger>
             <SheetContent side="left" className="w-72 p-4">
               <div className="flex h-full flex-col">
-                <Link to="/" className="mb-5 block px-1 font-semibold text-sm tracking-tight">
+                <Link to="/decks" className="mb-5 block px-1 font-semibold text-sm tracking-tight">
                   {t("appName")}
                 </Link>
                 {sidebarNav}
               </div>
             </SheetContent>
           </Sheet>
-          <span className="font-semibold text-sm">{t("appName")}</span>
-          {streak > 0 ? <StreakBadge streak={streak} /> : <div className="w-9" />}
+          <span className="truncate font-semibold text-sm">{t("appName")}</span>
+          <div className="flex shrink-0 items-center gap-1">
+            {streak > 0 && <StreakBadge streak={streak} />}
+            <FlamesBadge flames={flames} />
+          </div>
         </header>
 
         {/* pb-20 keeps content clear of the fixed bottom nav on mobile. */}

@@ -1,9 +1,11 @@
 import * as React from "react"
 import { useTranslation } from "react-i18next"
+import { Flame } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 import { supabase } from "@/lib/supabase"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 interface LeaderboardEntry {
   id: string
@@ -12,189 +14,173 @@ interface LeaderboardEntry {
   rank: number
 }
 
+/** Own standing straight from the DB, so it stays right for students who
+ *  sit below the top-100 the list itself fetches. */
+interface OwnStanding {
+  rank: number
+  flames_count: number
+  total: number
+}
+
+const TOP_LIMIT = 100
+
 export default function LeaderboardPage() {
   const { t } = useTranslation()
   const { profile, updateProfile } = useAuth()
   const [entries, setEntries] = React.useState<LeaderboardEntry[]>([])
+  const [standing, setStanding] = React.useState<OwnStanding | null>(null)
   const [loading, setLoading] = React.useState(true)
-  const [userRank, setUserRank] = React.useState<LeaderboardEntry | null>(null)
-  const [joiningLoading, setJoiningLoading] = React.useState(false)
+  const [joining, setJoining] = React.useState(false)
+
+  const optedIn = profile?.show_on_leaderboard ?? false
+  const profileId = profile?.id ?? null
 
   React.useEffect(() => {
-    const loadLeaderboard = async () => {
-      setLoading(true)
-      const { data, error } = await supabase.from("leaderboard").select("*").limit(100)
+    if (!optedIn) return
+    let cancelled = false
 
-      if (!error && data) {
-        setEntries((data as LeaderboardEntry[]) || [])
+    const load = async () => {
+      const [boardRes, rankRes] = await Promise.all([
+        supabase.from("leaderboard").select("*").order("rank").limit(TOP_LIMIT),
+        supabase.rpc("my_leaderboard_rank"),
+      ])
+      if (cancelled) return
 
-        if (profile) {
-          const userEntry = (data as LeaderboardEntry[]).find((e) => e.id === profile.id)
-          if (userEntry) {
-            setUserRank(userEntry)
-          }
-        }
-      }
+      setEntries((boardRes.data as LeaderboardEntry[]) ?? [])
+      // The RPC returns no row at all for someone who has not earned a
+      // flame yet — that is a real state (rank 0), not a failed load, so
+      // it has to clear any standing left over from a previous render.
+      const own = (rankRes.data as OwnStanding[] | null)?.[0] ?? null
+      setStanding(own)
       setLoading(false)
     }
 
-    loadLeaderboard()
+    void load()
 
-    // Subscribe to real-time updates
-    const subscription = supabase
-      .channel("leaderboard_changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "profiles" },
-        () => {
-          loadLeaderboard()
-        }
-      )
-      .subscribe()
+    // Own profile updates arrive over realtime (RLS keeps other people's
+    // rows out), so a word mastered here refreshes the board immediately;
+    // other players' scores land on the next visit or tab focus.
+    const channel = profileId
+      ? supabase
+          .channel(`leaderboard_${profileId}`)
+          .on(
+            "postgres_changes",
+            { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${profileId}` },
+            () => void load()
+          )
+          .subscribe()
+      : null
+
+    const onFocus = () => {
+      if (document.visibilityState === "visible") void load()
+    }
+    document.addEventListener("visibilitychange", onFocus)
 
     return () => {
-      void subscription.unsubscribe()
+      cancelled = true
+      document.removeEventListener("visibilitychange", onFocus)
+      if (channel) supabase.removeChannel(channel)
     }
-  }, [profile])
+  }, [optedIn, profileId])
 
-  const getMedalEmoji = (rank: number) => {
-    if (rank === 1) return "🥇"
-    if (rank === 2) return "🥈"
-    if (rank === 3) return "🥉"
-    return `#${rank}`
-  }
-
-  const handleJoinLeaderboard = async () => {
-    if (!profile) return
-    setJoiningLoading(true)
+  const handleJoin = async () => {
+    setJoining(true)
     try {
       await updateProfile({ show_on_leaderboard: true })
-    } catch (error) {
-      console.error("Error joining leaderboard:", error)
     } finally {
-      setJoiningLoading(false)
+      setJoining(false)
     }
   }
 
-  // Show join prompt if user hasn't joined
-  if (!profile?.show_on_leaderboard) {
+  if (!optedIn) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center space-y-6">
-        <div className="text-center space-y-3">
-          <div className="text-6xl">🔥</div>
-          <h1 className="text-3xl font-bold">{t("leaderboard.title")}</h1>
-          <p className="text-lg text-muted-foreground max-w-md">
-            {t("leaderboard.desc")}
-          </p>
+      <div className="mx-auto max-w-md space-y-6 py-10">
+        <div className="space-y-2">
+          <h1 className="text-xl font-semibold">{t("leaderboard.title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("leaderboard.desc")}</p>
         </div>
 
-        <div className="rounded-lg bg-amber-50 p-6 max-w-md space-y-3">
-          <div className="font-semibold text-amber-900">✨ {t("leaderboard.earnFlames")}</div>
-          <ul className="space-y-2 text-sm text-amber-800">
-            <li>✓ {t("leaderboard.flame1")}</li>
-            <li>✓ {t("leaderboard.flame2")}</li>
-          </ul>
-        </div>
+        <EarningRules />
 
-        <div className="rounded-lg bg-blue-50 p-4 text-sm max-w-md text-blue-800">
-          {t("leaderboard.info")}
-        </div>
+        <p className="text-xs text-muted-foreground">{t("leaderboard.info")}</p>
 
-        <Button onClick={handleJoinLeaderboard} disabled={joiningLoading} size="lg" className="mt-4">
-          {joiningLoading ? t("common.loading") : t("leaderboard.joinNow")}
+        <Button onClick={handleJoin} disabled={joining} className="w-full">
+          {joining ? t("common.loading") : t("leaderboard.joinNow")}
         </Button>
       </div>
     )
   }
 
   return (
-    <div className="max-w-3xl space-y-6">
-      {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold">🔥 {t("leaderboard.title", "Leaderboard")}</h1>
-        <p className="text-muted-foreground">{t("leaderboard.subtitle", "Top performers mastering German words")}</p>
+    <div className="mx-auto max-w-2xl space-y-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h1 className="text-xl font-semibold">{t("leaderboard.title")}</h1>
+        <span className="text-sm text-muted-foreground">
+          {standing
+            ? t("leaderboard.standing", { rank: standing.rank, total: standing.total })
+            : t("leaderboard.unranked")}
+        </span>
       </div>
 
-      {/* User's Rank (if on leaderboard) */}
-      {userRank && (
-        <div className="rounded-lg border-2 border-yellow-300 bg-yellow-50 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="text-2xl">{getMedalEmoji(userRank.rank)}</div>
-              <div>
-                <div className="font-semibold">{userRank.display_name || t("common.noName", "No name")}</div>
-                <div className="text-sm text-muted-foreground">
-                  {t("leaderboard.yourRank", "Your rank:")} #{userRank.rank}
-                </div>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-3xl font-bold">🔥 {userRank.flames_count}</div>
-              <div className="text-xs text-muted-foreground">{t("leaderboard.flames", "flames")}</div>
-            </div>
-          </div>
+      {loading ? (
+        <div className="space-y-px">
+          {[...Array(6)].map((_, i) => (
+            <Skeleton key={i} className="h-11 w-full" />
+          ))}
         </div>
+      ) : entries.length === 0 ? (
+        <p className="py-10 text-center text-sm text-muted-foreground">{t("leaderboard.empty")}</p>
+      ) : (
+        <ol className="divide-y rounded-lg border">
+          {entries.map((entry) => {
+            const isYou = entry.id === profileId
+            return (
+              <li
+                key={entry.id}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 text-sm",
+                  isYou && "bg-orange-50/70 dark:bg-orange-950/30"
+                )}
+              >
+                <span
+                  className={cn(
+                    "w-7 shrink-0 text-right tabular-nums text-muted-foreground",
+                    entry.rank <= 3 && "font-semibold text-foreground"
+                  )}
+                >
+                  {entry.rank}
+                </span>
+                <span className={cn("min-w-0 flex-1 truncate", isYou && "font-medium")}>
+                  {entry.display_name || t("common.noName")}
+                </span>
+                <span className="flex shrink-0 items-center gap-1 tabular-nums">
+                  <Flame className="h-3.5 w-3.5 text-orange-500" aria-hidden />
+                  {entry.flames_count}
+                </span>
+              </li>
+            )
+          })}
+        </ol>
       )}
 
-      {/* Leaderboard Table */}
-      <div className="space-y-2">
-        <h2 className="text-lg font-semibold">{t("leaderboard.topPlayers", "Top Players")}</h2>
+      <EarningRules />
+    </div>
+  )
+}
 
-        {loading ? (
-          <div className="space-y-2">
-            {[...Array(5)].map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full" />
-            ))}
-          </div>
-        ) : entries.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-muted-foreground p-8 text-center">
-            <div className="text-2xl mb-2">🦗</div>
-            <p className="text-muted-foreground">{t("leaderboard.empty", "No one on the leaderboard yet")}</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              {t("leaderboard.emptyHint", "Be the first to join and start earning flames!")}
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {entries.map((entry, index) => (
-              <div
-                key={entry.id}
-                className={`flex items-center justify-between rounded-lg p-3 ${
-                  entry.id === profile?.id ? "bg-blue-50 border-2 border-blue-200" : "bg-muted/30 hover:bg-muted/50"
-                } transition-colors`}
-              >
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="w-8 text-center font-semibold text-lg">{getMedalEmoji(entry.rank)}</div>
-                  <div className="flex-1">
-                    <div className="font-medium">
-                      {entry.display_name || t("common.noName", "No name")}
-                      {entry.id === profile?.id && (
-                        <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
-                          {t("leaderboard.you", "You")}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-lg font-bold">🔥 {entry.flames_count}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Info Box */}
-      <div className="rounded-lg bg-blue-50 p-4 text-sm">
-        <div className="font-semibold text-blue-900">💡 {t("leaderboard.howItWorks", "How it works:")}</div>
-        <ul className="mt-2 space-y-1 text-blue-800">
-          <li>✓ {t("leaderboard.info1", "Earn 1 flame for each word you master")}</li>
-          <li>✓ {t("leaderboard.info2", "Only appears on the leaderboard if you opted in")}</li>
-          <li>✓ {t("leaderboard.info3", "Updates in real-time as you learn")}</li>
-          <li>✓ {t("leaderboard.info4", "You can opt-out anytime in Settings")}</li>
-        </ul>
-      </div>
+/** The one place the earning rules are spelled out, shared by the opt-in
+ *  screen and the board itself so the two can never disagree. */
+function EarningRules() {
+  const { t } = useTranslation()
+  return (
+    <div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
+      <p className="mb-1.5 font-medium text-foreground">{t("leaderboard.rulesTitle")}</p>
+      <ul className="space-y-1">
+        <li>{t("leaderboard.rule1")}</li>
+        <li>{t("leaderboard.rule2")}</li>
+        <li>{t("leaderboard.rule3")}</li>
+        <li>{t("leaderboard.rule4")}</li>
+      </ul>
     </div>
   )
 }

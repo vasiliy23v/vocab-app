@@ -18,6 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { SUPPORTED_LANGUAGES } from "@/i18n"
+import { languageName } from "@/lib/languageLabel"
 import { supabase } from "@/lib/supabase"
 import { toast } from "sonner"
 import { AlertCircle } from "lucide-react"
@@ -46,9 +48,6 @@ export default function SettingsPage() {
   const [showOnLeaderboard, setShowOnLeaderboard] = React.useState(
     profile?.show_on_leaderboard ?? false
   )
-  const [languageFromTemp, setLanguageFromTemp] = React.useState<Language>(
-    (profile?.language_from || "en") as Language
-  )
   const [languageToTemp, setLanguageToTemp] = React.useState<Language>(
     (profile?.language_to || "de") as Language
   )
@@ -57,17 +56,30 @@ export default function SettingsPage() {
   const [resetDialogOpen, setResetDialogOpen] = React.useState(false)
   const [resetting, setResetting] = React.useState(false)
 
+  // The source language is not picked separately — it always follows the
+  // interface language chosen above.
+  const languageFrom = (i18n.language?.split("-")[0] || "en") as Language
+
+  // Learning a language into itself makes no sense: if the interface language
+  // catches up with the target, move the target to the next supported one.
+  React.useEffect(() => {
+    if (languageToTemp === languageFrom) {
+      const next = SUPPORTED_LANGUAGES.find((lang) => lang !== languageFrom)
+      if (next) setLanguageToTemp(next as Language)
+    }
+  }, [languageFrom, languageToTemp])
+
   // Track if anything changed
   React.useEffect(() => {
     const changed =
       displayName !== (profile?.display_name ?? "") ||
       vibrateOn !== (profile?.vibrate_on_correct ?? true) ||
       showOnLeaderboard !== (profile?.show_on_leaderboard ?? false) ||
-      languageFromTemp !== (profile?.language_from || "en") ||
+      languageFrom !== (profile?.language_from || "en") ||
       languageToTemp !== (profile?.language_to || "de")
 
     setHasChanges(changed)
-  }, [displayName, vibrateOn, showOnLeaderboard, languageFromTemp, languageToTemp, profile])
+  }, [displayName, vibrateOn, showOnLeaderboard, languageFrom, languageToTemp, profile])
 
   // Handle unsaved changes when leaving
   React.useEffect(() => {
@@ -90,7 +102,7 @@ export default function SettingsPage() {
         display_name: displayName || null,
         vibrate_on_correct: vibrateOn,
         show_on_leaderboard: showOnLeaderboard,
-        language_from: languageFromTemp,
+        language_from: languageFrom,
         language_to: languageToTemp,
       })
 
@@ -160,43 +172,28 @@ export default function SettingsPage() {
 
         <Separator />
 
-        {/* Learning Language Pair */}
+        {/* Language being learned */}
         <div className="space-y-3">
           <h3 className="font-semibold">{t("languagePair.title")}</h3>
-          <p className="text-sm text-muted-foreground">{t("languagePair.subtitle")}</p>
 
-          <div className="flex gap-2 items-end">
-            <div className="flex-1">
-              <Label className="text-xs mb-1 block">{t("languagePair.from")}</Label>
-              <Select value={languageFromTemp} onValueChange={(v) => setLanguageFromTemp(v as Language)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ru">Русский</SelectItem>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="de">Deutsch</SelectItem>
-                  <SelectItem value="uk">Українська</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="text-sm text-muted-foreground">→</div>
-
-            <div className="flex-1">
-              <Label className="text-xs mb-1 block">{t("languagePair.to")}</Label>
-              <Select value={languageToTemp} onValueChange={(v) => setLanguageToTemp(v as Language)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ru">Русский</SelectItem>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="de">Deutsch</SelectItem>
-                  <SelectItem value="uk">Українська</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Select value={languageToTemp} onValueChange={(v) => setLanguageToTemp(v as Language)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SUPPORTED_LANGUAGES.filter((lang) => lang !== languageFrom).map((lang) => (
+                  <SelectItem key={lang} value={lang}>
+                    {t(`language.${lang}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {t("languagePair.fromInterface", {
+                language: languageName(t, languageFrom),
+              })}
+            </p>
           </div>
         </div>
 
@@ -215,7 +212,7 @@ export default function SettingsPage() {
             <SelectContent>
               {DAILY_GOAL_OPTIONS.map((goal) => (
                 <SelectItem key={goal} value={goal.toString()}>
-                  {goal} {t("common.wordsCount", { count: goal })}
+                  {t("common.wordsCount", { count: goal })}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -361,7 +358,6 @@ export default function SettingsPage() {
                 setDisplayName(profile?.display_name ?? "")
                 setVibrateOn(profile?.vibrate_on_correct ?? true)
                 setShowOnLeaderboard(profile?.show_on_leaderboard ?? false)
-                setLanguageFromTemp((profile?.language_from || "en") as Language)
                 setLanguageToTemp((profile?.language_to || "de") as Language)
                 setHasChanges(false)
               }}
