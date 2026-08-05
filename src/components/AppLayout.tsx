@@ -234,7 +234,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // instead — that bar is always visible, unlike the drawer.
   const sidebarNav = (
     <>
-      <NavLinks onNavigate={() => setMobileOpen(false)} />
+      {/* The links scroll on their own if they ever outgrow the column, so
+          the account card and Sign out below stay reachable. */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <NavLinks onNavigate={() => setMobileOpen(false)} />
+      </div>
 
       <div className="mt-auto space-y-3 pt-4">
         <div className="flex items-center gap-2 rounded-lg border p-2">
@@ -269,8 +273,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background md:flex">
-      {/* Desktop: persistent sidebar */}
-      <aside className="hidden shrink-0 border-r p-4 md:flex md:w-60 md:flex-col">
+      {/* Desktop: persistent sidebar. Pinned to the viewport (sticky, one
+          screen tall) — as a plain flex item it stretched to the height of
+          the page, which on long pages like the deck list or the word table
+          pushed the account card and Sign out far below the fold. */}
+      <aside className="hidden shrink-0 border-r p-4 md:sticky md:top-0 md:flex md:h-screen md:w-60 md:flex-col md:self-start">
         <div className="flex h-full flex-col">
           <div className="mb-5 flex items-center justify-between gap-2 px-1">
             <Link to="/decks" className="truncate font-semibold text-sm tracking-tight">
